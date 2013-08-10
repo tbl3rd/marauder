@@ -6,65 +6,59 @@
   *the-map*
   nil)
 
-(def ^{:doc "Center of map for later reference."
-       :dynamic true
+(def ^{:doc "Everything tracked."
        :private true}
-  *the-center*
-  nil)
+  state
+  (atom {:users
+         {7 {:name "Boston" :lat 42.369706 :lng -71.060257 :mark nil}
+          8 {:name "home"   :lat 42.382545 :lng -71.137122 :mark nil}
+          9 {:name "work"   :lat 42.382314 :lng -71.137525 :mark nil}}
+         :places
+         {}}))
 
-(defn boston []
+(defn mark-user [m u]
+  "Return user u with a mark in map m."
+  (let [mark (google.maps.Marker.
+              (clj->js {:title (:name u)
+                        :position (google.maps.LatLng. (:lat u) (:lng u))
+                        ;; :animation google.maps.Animation.DROP
+                        :map m}))]
+    (assoc u :mark mark)))
+
+(defn place-markers
+  "Return state s with a marker on map m for each user."
+  [s m]
+  (assoc s :users
+         (into {}
+               (map (fn [id user] [id (mark-user m user)]) (:users s)))))
+
+(defn bound-marks
+  [marks]
+  (let [result (google.maps.LatLngBounds.)]
+    (doseq [m marks] (.extend result (.-position m)))
+    result))
+
+(defn usa-ma-boston []
   (google.maps.LatLng. 42.369706 -71.060257))
 
-(def map-type
-  {:roadmap   google.maps.MapTypeId.ROADMAP
-   :satellite google.maps.MapTypeId.SATELLITE
-   :hybrid    google.maps.MapTypeId.HYBRID
-   :terrain   google.maps.MapTypeId.TERRAIN})
-
-(def map-events #{"bounds_changed"
-                  "center_changed"
-                  "zoom_changed"})
-
-(def marker-events #{"click"
-                     "dblclick"
-                     "mouseup"
-                     "mousedown"
-                     "mouseover"
-                     "mouseout"})
-
-(defn recenter
-  "Recenter map m on latlng."
-  [m latlng]
-  (.setCenter m latlng))
-
-(defn place-marker
-  "Place a marker on map m at latlng."
-  [m latlng]
-  (recenter m latlng)
-  (google.maps.Marker. (clj->js {:map m :position latlng})))
+(defn australia-sydney []
+  (google.maps.LatLng. -33.859972 151.211111))
 
 (defn initialize
   "Open a ROADMAP on Boston in :div#map-canvas."
   []
-  (let [options {:center (boston)
+  (let [options {:center (usa-ma-boston)
+                 ;; :center (australia-sydney)
                  :zoom 8
                  :mapTypeId google.maps.MapTypeId.ROADMAP}
         the-map (google.maps.Map. (.getElementById js/document "map-canvas")
-                                  (clj->js options))
-        the-center (google.maps.Marker.
-                    (clj->js {:position (.getCenter the-map)
-                              :map the-map
-                              :title "click to zoom"}))
-        recenter (fn [] (.panTo the-map (.getPosition the-center)))
-        rezoom (fn [] (doto the-map
-                        (.setZoom 8)
-                        (-> the-center .getPosition .setCenter)))]
-    (.addListener the-map "click"
-                  (fn [e] (place-marker the-map (.-latLng e))))
-    '(.addListener the-map "center_changed"
-                  #(.setTimeout js/window recenter 3000))
-    (google.maps.event.addListener the-center "click" rezoom)
-    (set! *the-map* the-map)
-    (set! *the-center* the-center)))
+                                  (clj->js options))]
+    (place-markers @state the-map)
+    '(swap! state place-markers the-map)
+    '(.fitBounds the-map
+                (bound-marks
+                 (map :mark (vals (:users
+                                   (swap! state place-markers the-map))))))
+    (set! *the-map* the-map)))
 
 (google.maps.event.addDomListener js/window "load" initialize)

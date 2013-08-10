@@ -25,6 +25,7 @@
   (html5
    [:head
     [:title "Marauder"]
+    [:meta {:http-equiv "content-type" :content "text/html;charset=UTF-8"}]
     [:meta {:name "viewport" :content "initial-scale=1.0, user-scalable=no"}]
     [:style {:type "text/css"} google-maps-viewport-css-inline]
     (include-css "css/marauder.css")
