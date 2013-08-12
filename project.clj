@@ -8,7 +8,6 @@
             [lein-ring "0.8.6"]]
   :source-paths ["clj"]
   :ring {:handler marauder.routes/marauder-ring-app}
-  :hooks [leiningen.cljsbuild]
   :cljsbuild
   {:repl-listen-port 9000
    :builds [{:source-paths ["cljs"]
