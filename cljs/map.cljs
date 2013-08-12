@@ -1,17 +1,5 @@
-(ns marauder.map)
-
-(def icons
-  (atom #{"img/mm_20_black.png"
-          "img/mm_20_blue.png"
-          "img/mm_20_brown.png"
-          "img/mm_20_gray.png"
-          "img/mm_20_green.png"
-          "img/mm_20_orange.png"
-          "img/mm_20_purple.png"
-          "img/mm_20_red.png"
-          "img/mm_20_shadow.png"
-          "img/mm_20_white.png"
-          "img/mm_20_yellow.png"}))
+(ns marauder.map
+  (:require [marauder.icon :as icon]))
 
 (defn usa-ma-boston []
   (google.maps.LatLng. 42.369706 -71.060257))
@@ -51,7 +39,10 @@
         latlng (google.maps.LatLng. (:lat user) (:lng user))]
     (assoc-in s [:users id :mark]
               (google.maps.Marker.
-               (clj->js {:title (:name user) :position latlng :map m})))))
+               (clj->js {:title (:name user)
+                         :icon (icon/get-icon)
+                         :position latlng
+                         :map m})))))
 
 (defn bound-marks
   "Get the bounding box for all marks."
