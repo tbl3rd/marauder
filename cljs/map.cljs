@@ -8,7 +8,6 @@
 
 (defn make-the-map []
   (let [options {:center (usa-ma-boston)
-                 ;; :center (australia-sydney)
                  :zoom 8
                  :mapTypeId google.maps.MapTypeId.ROADMAP}]
     (google.maps.Map. (.getElementById js/document "map-canvas")
@@ -39,22 +38,25 @@
               (google.maps.Marker.
                (clj->js {:title name :position latlng :map m})))))
 
-(defn place-marker!
-  [s m name]
-  (swap! s mark-user m name))
-
 (defn bound-marks
+  "Get the bounding box for all marks."
   [marks]
   (let [result (google.maps.LatLngBounds.)]
     (doseq [m marks] (.extend result (.-position m)))
     result))
 
+(defn show-all-on-map
+  "Get all places in the state s onto the map m."
+  [m s]
+  (.fitBounds m (bound-marks (map :mark (vals (:users s))))))
+
 (defn initialize
   "Open a ROADMAP on Boston in :div#map-canvas."
   []
   (let [the-map (make-the-map)]
-    (doseq [name (keys (:users @state))] (place-marker! state the-map name))
-    (.fitBounds the-map (bound-marks (map :mark (vals (:users @state)))))
+    (doseq [name (keys (:users @state))]
+      (swap! state mark-user the-map name))
+    (show-all-on-map the-map @state)
     (set! *the-map* the-map)))
 
 (google.maps.event.addDomListener js/window "load" initialize)
