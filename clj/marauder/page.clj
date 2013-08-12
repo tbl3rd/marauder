@@ -26,7 +26,6 @@
    [:head
     [:title "Marauder"]
     [:meta {:charset "UTF-8"}]
-    ;; [:meta {:http-equiv "content-type" :content "text/html;charset=UTF-8"}]
     [:meta {:name "viewport" :content "initial-scale=1.0, user-scalable=no"}]
     [:style {:type "text/css"} google-maps-viewport-css-inline]
     (include-css "css/marauder.css")
@@ -37,8 +36,4 @@
   (layout
    [:div#map-canvas]
    (include-js "js/marauder.js")
-   [:script {:type "text/javascript"} "goog.require('marauder.map')"]
-   [:script {:type "text/javascript"} "goog.require('marauder.repl')"]
-   [:script {:type "text/javascript"}
-    "clojure.browser.repl.connect.call(null, 'http://localhost:9000/repl');"]
    [:script {:type "text/javascript"} "alert('marauder loaded')"]))
