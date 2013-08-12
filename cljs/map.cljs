@@ -19,10 +19,10 @@
   nil)
 
 (defn initial-state []
-  {:users {"Boston"    {:lat 42.369706 :lng -71.060257}
-           "Cambridge" {:lat 42.378836 :lng -71.110436}
-           "home"      {:lat 42.382545 :lng -71.137122}
-           "work"      {:lat 42.366931 :lng -71.091352}}
+  {:users {"6" {:name "Boston"    :lat 42.369706 :lng -71.060257}
+           "7" {:name "Cambridge" :lat 42.378836 :lng -71.110436}
+           "8" {:name "home"      :lat 42.382545 :lng -71.137122}
+           "9" {:name "work"      :lat 42.366931 :lng -71.091352}}
    :places {}})
 
 (def ^{:doc "Everything tracked."}
@@ -31,12 +31,12 @@
 
 (defn mark-user
   "Return state s with a marker on map m for user [name info]."
-  [s m name]
-  (let [info (get-in s [:users name])
+  [s m id]
+  (let [info (get-in s [:users id])
         latlng (google.maps.LatLng. (:lat info) (:lng info))]
-    (assoc-in s [:users name :mark]
+    (assoc-in s [:users id :mark]
               (google.maps.Marker.
-               (clj->js {:title name :position latlng :map m})))))
+               (clj->js {:title (:name info) :position latlng :map m})))))
 
 (defn bound-marks
   "Get the bounding box for all marks."
@@ -54,8 +54,8 @@
   "Open a ROADMAP on Boston in :div#map-canvas."
   []
   (let [the-map (make-the-map)]
-    (doseq [name (keys (:users @state))]
-      (swap! state mark-user the-map name))
+    (doseq [id (keys (:users @state))]
+      (swap! state mark-user the-map id))
     (show-all-on-map the-map @state)
     (set! *the-map* the-map)))
 
