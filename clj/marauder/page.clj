@@ -4,15 +4,13 @@
             [hiccup.page :refer [html5 include-css include-js]]))
 
 (defn- make-query-string [map]
-  (apply str "?"
-         (s/join "&"
-                 (for [[k v] map] (str (name k) "=" v) ))))
+  (s/join "&" (for [[k v] map] (str (name k) "=" v) )))
 
 (defn- google-maps-api-key []
   "AIzaSyA10Vv0gV5yLp1WcTpqoA9hhILt_Rhc6OQ")
 
 (defn- google-maps-url [key sensor?]
-  (str "http://maps.googleapis.com/maps/api/js"
+  (str "http://maps.googleapis.com/maps/api/js?"
        (make-query-string {:key key :sensor sensor?})))
 
 (def google-maps-viewport-css-inline

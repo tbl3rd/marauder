@@ -1,5 +1,7 @@
 (ns marauder.map
-  (:require [marauder.icon :as icon]))
+  (:require [marauder.icon :as icon]
+            [goog.events :as events]
+            [goog.net.XhrIo :as xhr]))
 
 (defn usa-ma-boston []
   (google.maps.LatLng. 42.369706 -71.060257))
@@ -66,3 +68,16 @@
     (set! *the-map* the-map)))
 
 (google.maps.event.addDomListener js/window "load" initialize)
+
+(defn here-i-am [id lat lng]
+  (let [connection (goog.net.XhrIo.)]
+    (events/listen connection goog.net.EventType/COMPLETE
+                   #(js/alert (.getResponseText connection)))
+    (. connection (send "/echo" "POST" (pr-str {:id id :lat lat :lng lng})
+                        (clj->js {"Content-type" "application/edn"})
+                        ))))
+
+;; (here-i-am "                                        " 42.369706 -71.060257)
+(here-i-am "                                        "
+           "XXXXXXXXXXXXXXXXXXXXXXXXXXX"
+           "                            ")

@@ -1,4 +1,4 @@
-(ns marauder.repl
-  (:require [clojure.browser.repl :as repl]))
+(ns marauder.brepl
+  (:require [clojure.browser.repl :as brepl]))
 
-(repl/connect "http://localhost:9000/repl")
+(brepl/connect "http://localhost:4321/repl")
