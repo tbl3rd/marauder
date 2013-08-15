@@ -6,22 +6,52 @@
             [compojure.handler :as handler]
             [ring.middleware.format :refer [wrap-restful-format]]
             [ring.middleware.params :refer [wrap-params]]
-            [marauder.page :as page]
-            [marauder.state :as state]))
+            [marauder.page :as page]))
+
+(defn initial-state []
+  {:users
+   {"6" {:name "Boston"    :lat 42.369706 :lng -71.060257}
+    "7" {:name "Cambridge" :lat 42.378836 :lng -71.110436}
+    "8" {:name "home"      :lat 42.382545 :lng -71.137122}
+    "9" {:name "work"      :lat 42.366931 :lng -71.091352}}
+   :places
+   {}})
+
+(def ^{:doc "Everything tracked."}
+  state
+  (atom (initial-state)))
 
 (defn edn-response [data & [status]]
   {:status (or status 200)
    :headers {"Content-type" "application/edn"}
    :body (pr-str data)})
 
+(defn merge-nested
+  "Merge a sequence of nested maps into a single nested map.  Last wins."
+  [& maps]
+  (apply merge-with merge-nested maps))
+
+(defn new-untagged-uuid [] (str (java.util.UUID/randomUUID)))
+
+(defn update-user
+  [update]
+  (let [id (or (:id update) (new-untagged-uuid))
+        uwoid (dissoc update :id)
+        merger (fn [s] (merge-nested s {:users {id uwoid}}))
+        new-state (swap! state merger)]
+    (assoc new-state :you {id uwoid})))
+
+(defn wrap-log [app]
+  (fn [request]
+    (println (select-keys (:body request)
+                          [:uri :params :body-params :form-params]))
+    (app request)))
+
 (defroutes routes
-  (GET "/name/:id/:name" [id name]
-       (state/name-user id name))
-  (GET "/user/:id/:lat/:lng" [id lat lng]
-       (state/update-user id lat lng))
+  (POST "/update" request
+        (pr-str (update-user (:body-params request))))
   (POST "/echo" request
-        (pr-str "ECHO" {:status 200
-                        :body  request}))
+        (pr-str "ECHO" (:body-params request)))
   (GET "/" [] (page/page))
   (route/resources "/")
   (route/not-found "This is not the page you are looking for."))
