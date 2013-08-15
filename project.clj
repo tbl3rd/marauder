@@ -15,7 +15,7 @@
          :auto-reload? true
          :handler marauder.routes/marauder-ring-app}
   :cljsbuild
-  {:repl-listen-port 9000
+  {:repl-listen-port 8888
    :builds [{:source-paths ["cljs"]
              :compiler {:output-to "resources/public/js/marauder.js"
                         :optimizations :whitespace
@@ -23,4 +23,4 @@
              :jar true}]})
 
 ;; Start ring server with: lein ring server-headless
-;; Start ClojureScript browser repl with: ~/bin/browser-repl :port 4321
+;; Start ClojureScript browser repl with: ~/bin/browser-repl :port 8888
