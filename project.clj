@@ -23,4 +23,5 @@
              :jar true}]})
 
 ;; Start ring server with: lein ring server-headless
+;; Start ClojureScript updates with: lein cljsbuild auto
 ;; Start ClojureScript browser repl with: ~/bin/browser-repl :port 8888

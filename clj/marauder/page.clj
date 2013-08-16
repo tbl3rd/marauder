@@ -34,5 +34,4 @@
   (layout
    [:div#map-canvas]
    (include-js "js/marauder.js")
-   ;; [:script {:type "text/javascript"} "alert('marauder loaded')"]
-   ))
+   (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])))
