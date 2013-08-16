@@ -1,8 +1,9 @@
 (ns marauder.map
-  (:require [cljs.reader :as reader]
+  (:require [cljs.reader :as reader-but-who-cares?]
             [marauder.icon :as icon]
             [goog.events :as events]
-            [goog.net.XhrIo :as xhr]))
+            [goog.net.cookies :as cookies-but-who-cares?]
+            [goog.net.XhrIo :as xhrio-but-who-cares?]))
 
 (def ^{:doc "A google.maps.Map for later reference."
        :dynamic true}
@@ -12,10 +13,16 @@
 (def ^{:doc "The google.maps.Marker objects on *my-map* by id."}
   my-marks (atom {}))
 
-(def ^{:doc "My ID from the server."
-       :dynamic true}
-  *my-id*
-  nil)
+(def ^{:doc "My ID from the server."}
+  state
+  (atom (cljs.reader/read-string
+         (or (. js/localStorage getItem "state")
+             (pr-str {:id nil :name "anonymous"})))))
+
+(defn set-my!
+  [k v]
+  (let [value (swap! state assoc k v)]
+    (. js/localStorage setItem "state" (pr-str value))))
 
 (defn log
   "Log stuff on the JS console."
@@ -48,7 +55,7 @@
 (defn usa-ma-boston [] (glatlng 42.369706 -71.060257))
 (defn australia-sydney [] (glatlng -33.859972 151.211111))
 
-(defn make-my-map []
+(defn make-my-map [response]
   (let [options {:center (australia-sydney)
                  :zoom 8
                  :mapTypeId google.maps.MapTypeId.ROADMAP}]
@@ -70,8 +77,8 @@
       {id
        (if-let [mark (get the-marks id)]
          (doto mark
-           (. position setPosition)
-           (. name setTitle))
+           (.setPosition position)
+           (.setTitle name))
          (google.maps.Marker.
           (clj->js {:title name
                     :position position
@@ -106,14 +113,15 @@
   (let [connection (new goog.net.XhrIo)]
     (events/listen connection goog.net.EventType/COMPLETE
                    #(handle-response
-                     (reader/read-string (. connection getResponseText))))
+                     (cljs.reader/read-string
+                      (. connection getResponseText))))
     (. connection send "/update" "POST" request
-           (clj->js {"Content-type" "application/edn"}))))
+       (clj->js {"Content-type" "application/edn"}))))
 
 (defn update-my-position
   [my-marks my-map id name]
   (let [handle (fn [response]
-                 (if (not id) (set! *my-id* (first (keys (:you response)))))
+                 (if (not id) (set-my! :id (first (keys (:you response)))))
                  (swap! my-marks update-the-user-marks my-map response)
                  (show-all-marks @my-marks))
         send (fn [update handle] (send-await-response update handle))
@@ -131,8 +139,8 @@
 (defn initialize
   "Open a ROADMAP on Boston in :div#map-canvas."
   []
-  (let [my-map (make-my-map)]
-    (update-my-position my-marks my-map *my-id* "tbl")
+  (let [my-map (make-my-map nil)]
+    (update-my-position my-marks my-map (:id @state) (:name @state))
     (google.maps.event.addListenerOnce
      my-map "idle" (fn []
                      (log "initialize idle")
