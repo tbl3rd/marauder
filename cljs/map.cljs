@@ -5,21 +5,19 @@
             [goog.net.cookies :as cookies-but-who-cares?]
             [goog.net.XhrIo :as xhrio-but-who-cares?]))
 
-(def ^{:doc "A google.maps.Map for later reference."
-       :dynamic true}
-  *my-map*
-  nil)
+(def ^{:doc "A google.maps.Map."}
+  my-map (atom nil))
 
-(def ^{:doc "The google.maps.Marker objects on *my-map* by id."}
+(def ^{:doc "The google.maps.Marker objects indexed by id."}
   my-marks (atom {}))
 
-(def ^{:doc "My ID from the server."}
-  state
-  (atom (cljs.reader/read-string
-         (or (. js/localStorage getItem "state")
-             (pr-str {:id nil :name "anonymous"})))))
+(def ^{:doc "User state cached across sessions."}
+  state (atom (cljs.reader/read-string
+               (or (. js/localStorage getItem "state")
+                   (pr-str {:id nil :name "anonymous"})))))
 
-(defn set-my!
+(defn remember!
+  "Remember that key k has value v across sessions."
   [k v]
   (let [value (swap! state assoc k v)]
     (. js/localStorage setItem "state" (pr-str value))))
@@ -29,7 +27,7 @@
   [stuff]
   (. js/console log (clj->js stuff)))
 
-;; Hide differences between different geoposition types.
+;; Hide differences between GoogleMaps and HTML5 geoposition types.
 ;;
 (defprotocol ILatitudeLongitude
   (latitude [p])
@@ -52,38 +50,6 @@
        (glatlng (:lat position) (:lng position))
        (glatlng (latitude position) (longitude position)))))
 
-(defn usa-ma-boston [] (glatlng 42.369706 -71.060257))
-(defn australia-sydney [] (glatlng -33.859972 151.211111))
-
-(defn make-my-map [response]
-  (let [options {:center (australia-sydney)
-                 :zoom 8
-                 :mapTypeId google.maps.MapTypeId.ROADMAP}]
-    (new google.maps.Map
-         (. js/document getElementById "map-canvas")
-         (clj->js options))))
-
-(defn map-of-the-marks
-  "Return nil or the map shared by the-marks."
-  [the-marks]
-  (first (map (fn [[id mark]] (.getMap mark)) the-marks)))
-
-(defn make-user-mark-updater
-  "A map of all the-marks on the-map."
-  [the-map the-marks]
-  (fn [[id update]]
-    (let [position (glatlng update)
-          name (:name update)]
-      {id
-       (if-let [mark (get the-marks id)]
-         (doto mark
-           (.setPosition position)
-           (.setTitle name))
-         (google.maps.Marker.
-          (clj->js {:title name
-                    :position position
-                    :map the-map})))})))
-
 (defn bound-response
   "Get the LatLngBounds of all the positions in the update response."
   [response]
@@ -92,58 +58,60 @@
     (doseq [position (map glatlng users)] (. bounds extend position))
     bounds))
 
-(defn show-all-marks
-  "Show all the marks on their map."
-  [marks]
-  (let [bounds (google.maps.LatLngBounds.)]
-    (doseq [mark (vals marks)] (. bounds extend (. mark -position)))
-    (if-let [the-map (map-of-the-marks marks)]
-      (. the-map fitBounds bounds))
-    bounds))
-
-(defn update-the-user-marks
-  "Update the-marks on the-map with the :users response."
-  [the-marks the-map response]
-  (apply merge the-marks
-         (map (make-user-mark-updater the-map the-marks) (:users response))))
-
-(defn send-await-response
-  "Send request map to /update then pass response to handle-response."
-  [request handle-response]
+(defn post
+  "POST request map to uri then pass response to handle-response."
+  [uri request handle-response]
   (let [connection (new goog.net.XhrIo)]
     (events/listen connection goog.net.EventType/COMPLETE
                    #(handle-response
                      (cljs.reader/read-string
                       (. connection getResponseText))))
-    (. connection send "/update" "POST" request
+    (. connection send uri "POST" request
        (clj->js {"Content-type" "application/edn"}))))
 
-(defn update-my-position
-  [my-marks my-map id name]
-  (let [handle (fn [response]
-                 (if (not id) (set-my! :id (first (keys (:you response)))))
-                 (swap! my-marks update-the-user-marks my-map response)
-                 (show-all-marks @my-marks))
-        send (fn [update handle] (send-await-response update handle))
-        update (fn [position]
-                 (log position)
-                 (send {:id id :name name
-                        :lat (latitude position)
-                        :lng (longitude position)}
-                       handle)
-                 )]
-    (-> js/navigator
-        (. -geolocation)
-        (. getCurrentPosition update))))
+(defn update-my-position!
+  "Update state with my current position."
+  [state]
+  (-> js/navigator
+      (. -geolocation)
+      (. getCurrentPosition
+         (fn [position]
+           (swap! state merge {:lat (latitude position)
+                               :lng (longitude position)})))))
+
+(defn request-update
+  "Request an update from the server and (handle update)."
+  [handle]
+  (post "/update" (select-keys @state [:id :name :lat :lng]) handle))
+
+(defn make-google-map
+  "A Google Map covering the region defined by bounds."
+  [bounds]
+  (doto (new google.maps.Map
+             (. js/document getElementById "googlemapcanvas")
+             (clj->js {:center (. bounds getCenter)
+                       :mapTypeId google.maps.MapTypeId.ROADMAP}))
+    (.fitBounds bounds)))
+
+(defn mark-map
+  "Mark gmap with title at position."
+  [gmap title position]
+  (new google.maps.Marker
+       (clj->js {:title title
+                 :position position
+                 :map gmap})))
 
 (defn initialize
-  "Open a ROADMAP on Boston in :div#map-canvas."
+  "Open a ROADMAP on Boston in :div#googlemapcanvas with everyone marked."
   []
-  (let [my-map (make-my-map nil)]
-    (update-my-position my-marks my-map (:id @state) (:name @state))
-    (google.maps.event.addListenerOnce
-     my-map "idle" (fn []
-                     (log "initialize idle")
-                     (set! *my-map* my-map)))))
+  (update-my-position! state)
+  (request-update
+   (fn [response]
+     (remember! :id (first (keys (:you response))))
+     (swap! my-map (constantly (make-google-map (bound-response response))))
+     (letfn [(mark [[id user]]
+               [id (mark-map @my-map (:name user) (glatlng user))])]
+       (swap! my-marks
+              (fn [m] (into m (map mark (:users response)))))))))
 
 (google.maps.event.addDomListener js/window "load" initialize)

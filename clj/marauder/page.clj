@@ -17,7 +17,7 @@
   (s/join "\n"
           ["html { height: 100%; }"
            "body { height: 100%; }"
-           "#map-canvas { height: 100%; margin: 0; padding: 0; }"]))
+           "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"]))
 
 (defn- layout [& content]
   (html5
@@ -32,6 +32,6 @@
 
 (defn page []
   (layout
-   [:div#map-canvas]
+   [:div#googlemapcanvas]
    (include-js "js/marauder.js")
    (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])))
