@@ -1,11 +1,10 @@
 (ns marauder.routes
   (:require [clojure.string :as s]
             [clj-http.client :as client]
+            [clojure.edn]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [compojure.handler :as handler]
-            [ring.middleware.format :refer [wrap-restful-format]]
-            [ring.middleware.params :refer [wrap-params]]
             [marauder.page :as page]))
 
 (defn initial-state []
@@ -37,36 +36,53 @@
 (defn new-untagged-uuid [] (str (java.util.UUID/randomUUID)))
 (def next-id (atom (count (:users @state))))
 (defn next-id-for-debugging
+  "Return a new integer ID."
   []
   (let [result @next-id]
     (swap! next-id inc)))
 
 (defn update-user
+  "Update state with user position in update."
   [update]
+  (println "update-user" update)
   (let [id (or (:id update) (next-id-for-debugging))
         uwoid (dissoc update :id)
         merger (fn [s] (merge-nested s {:users {id uwoid}}))
         new-state (swap! state merger)]
     (assoc new-state :you {id uwoid})))
 
-(defn wrap-log [app]
+(defn wrap-log
+  "Log some keys from request to the server console."
+  [app]
   (fn [request]
-    (println (select-keys (:body request)
-                          [:uri :params :body-params :form-params]))
+    (println (select-keys
+              (:body request)
+              [:uri :params :body-params :form-params]))
     (app request)))
+
+(defn wrap-marauder-edn
+  "Add to request a :marauder-edn key with value an edn reading of :body."
+  [app]
+  (fn [request]
+    (let [body (:body request)
+          read (fn [in] (clojure.edn/read {:eof nil} in))
+          in (new java.io.PushbackReader (new java.io.InputStreamReader body))
+          with-edn (assoc request :marauder-edn (read in))]
+      (println :wrap-marauder-edn (:marauder-edn with-edn))
+      (app with-edn))))
 
 (defroutes routes
   (POST "/update" request
-        (pr-str (update-user (:body-params request))))
+        (edn-response (update-user (:marauder-edn request))))
   (POST "/echo" request
-        (pr-str "ECHO" (:body-params request)))
+        (pr-str "ECHO" request))
   (GET "/" [] (page/page))
   (route/resources "/")
   (route/not-found "This is not the page you are looking for."))
 
 (def marauder-ring-app
   (-> (handler/site routes)
-      (wrap-restful-format)))
+      (wrap-marauder-edn)))
 
 (def minimal-ring-request-map {:server-port 80
                                :server-name "127.0.0.1"

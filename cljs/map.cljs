@@ -5,6 +5,24 @@
             [goog.net.cookies :as cookies-but-who-cares?]
             [goog.net.XhrIo :as xhrio-but-who-cares?]))
 
+;; Hide differences between GoogleMaps and HTML5 geoposition types.
+;;
+(defprotocol ILatitudeLongitude
+  (latitude [p])
+  (longitude [p]))
+(extend-type google.maps.LatLng
+  ILatitudeLongitude
+  (latitude [p] (.lat p))
+  (longitude [p] (.lng p)))
+(extend-protocol ILatitudeLongitude
+  object
+  (latitude [p] (.. p -coords -latitude))
+  (longitude [p] (.. p -coords -longitude)))
+(extend-protocol ILatitudeLongitude     ; HACK around null exception.
+  nil
+  (latitude [p] 0)
+  (longitude [p] 0))
+
 (def ^{:doc "A google.maps.Map."}
   my-map (atom nil))
 
@@ -26,20 +44,6 @@
   "Log stuff on the JS console."
   [stuff]
   (. js/console log (clj->js stuff)))
-
-;; Hide differences between GoogleMaps and HTML5 geoposition types.
-;;
-(defprotocol ILatitudeLongitude
-  (latitude [p])
-  (longitude [p]))
-(extend-type google.maps.LatLng
-  ILatitudeLongitude
-  (latitude [p] (.lat p))
-  (longitude [p] (.lng p)))
-(extend-protocol ILatitudeLongitude
-  object
-  (latitude [p] (.. p -coords -latitude))
-  (longitude [p] (.. p -coords -longitude)))
 
 (defn glatlng
   "A Google Maps LatLng from whatever."
@@ -69,20 +73,31 @@
     (. connection send uri "POST" request
        (clj->js {"Content-type" "application/edn"}))))
 
-(defn update-my-position!
-  "Update state with my current position."
-  [state]
+(defn call-with-new-position
+  "Pass new position to with-new-position."
+  [with-new-position]
   (-> js/navigator
       (. -geolocation)
-      (. getCurrentPosition
-         (fn [position]
-           (swap! state merge {:lat (latitude position)
-                               :lng (longitude position)})))))
+      (. getCurrentPosition with-new-position)))
+
+(defn update-my-position!
+  "Update my state with position."
+  [position]
+  (log "update-my-position! callback")
+  (log {:lat (latitude position) :lng (longitude position)})
+  (swap! state merge
+         {:lat (latitude position)
+          :lng (longitude position)}))
 
 (defn request-update
   "Request an update from the server and (handle update)."
-  [handle]
-  (post "/update" (select-keys @state [:id :name :lat :lng]) handle))
+  [state handle]
+  (call-with-new-position
+   (fn [position]
+     (post "/update"
+           (select-keys (update-my-position! position)
+                        [:id :name :lat :lng])
+           handle))))
 
 (defn make-google-map
   "A Google Map covering the region defined by bounds."
@@ -104,11 +119,16 @@
 (defn initialize
   "Open a ROADMAP on Boston in :div#googlemapcanvas with everyone marked."
   []
-  (update-my-position! state)
   (request-update
+   state
    (fn [response]
+     (log "initialize")
+     (log (pr-str response))
      (remember! :id (first (keys (:you response))))
-     (swap! my-map (constantly (make-google-map (bound-response response))))
+     (swap! my-map
+            (constantly
+             (make-google-map
+              (bound-response (js->clj response)))))
      (letfn [(mark [[id user]]
                [id (mark-map @my-map (:name user) (glatlng user))])]
        (swap! my-marks
