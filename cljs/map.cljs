@@ -1,10 +1,6 @@
 (ns marauder.map
   (:require [cljs.reader :as reader-but-who-cares?]
-            [clojure.string :as s]
-            [marauder.icon :as icon]
-            [goog.events :as events]
-            [goog.net.cookies :as cookies-but-who-cares?]
-            [goog.net.XhrIo :as xhrio-but-who-cares?]))
+            [marauder.icon :as icon]))
 
 ;; Hide differences between GoogleMaps and HTML5 geoposition types.
 ;;
@@ -104,10 +100,10 @@
   "POST request map to uri then pass response to handle-response."
   [uri request handle-response]
   (let [connection (new goog.net.XhrIo)]
-    (events/listen connection goog.net.EventType/COMPLETE
-                   #(handle-response
-                     (cljs.reader/read-string
-                      (. connection getResponseText))))
+    (goog.events.listen connection goog.net.EventType/COMPLETE
+                        #(handle-response
+                          (cljs.reader/read-string
+                           (. connection getResponseText))))
     (. connection send uri "POST" request
        (clj->js {"Content-type" "application/edn"}))))
 
@@ -193,7 +189,7 @@
      (remember! :id (first (keys (:you response))))
      (swap! my-map #(make-google-map (bound-response response)))
      (google.maps.event.addListenerOnce
-      @my-map "idle" #(periodically update-user-marks 3000))
+      @my-map "idle" #(periodically update-user-marks 60000))
      (letfn [(mark [[id user]] [id (mark-map @my-map user)])]
        (swap! marks (fn [m] (into m (map mark (:users response)))))))))
 
