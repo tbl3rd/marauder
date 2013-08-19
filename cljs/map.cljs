@@ -1,5 +1,6 @@
 (ns marauder.map
   (:require [cljs.reader :as reader-but-who-cares?]
+            [clojure.string :as s]
             [marauder.icon :as icon]
             [goog.events :as events]
             [goog.net.cookies :as cookies-but-who-cares?]
@@ -42,7 +43,7 @@
   my-map (atom nil))
 
 (def ^{:doc "The google.maps.Marker objects indexed by id."}
-  my-marks (atom {}))
+  marks (atom {}))
 
 (def ^{:doc "Local user state cached across sessions."}
   state (atom (cljs.reader/read-string
@@ -54,6 +55,20 @@
   [k v]
   (let [value (swap! state assoc k v)]
     (. js/localStorage setItem "state" (pr-str value))))
+
+(def ^{:doc "A google.maps.Geocoder set once from reverse-geocode."}
+  geocoder (atom nil))
+
+(defn reverse-geocode
+  "Call handle with the address of mark."
+  [mark handle]
+  (if (nil? @geocoder)
+    (swap! geocoder (constantly (new google.maps.Geocoder))))
+  (. @geocoder geocode (clj->js {:latLng (. mark getPosition)})
+     (fn [results status]
+       (if (= status google.maps.GeocoderStatus.OK)
+         (if-let [result (aget results 0)]
+           (handle (. result -formatted-address)))))))
 
 (defn log
   "Log stuff on the JS console.  Maps do well."
@@ -69,6 +84,13 @@
   "After ms milliseconds call f every ms milliseconds."
   [f ms]
   (after (fn [] (f) (periodically f ms)) ms))
+
+(def ^{:doc "The maximum Z index established by raise! so far."}
+  max-z-index-for-raise
+  (atom google.maps.MAX_ZINDEX))
+(defn raise!
+  [thing]
+  (. thing setZIndex (swap! max-z-index-for-raise inc)))
 
 (defn bound-response
   "Get the LatLngBounds of all the positions in the update response."
@@ -92,8 +114,6 @@
 (defn update-my-position!
   "Update my state with position."
   [position]
-  (log "update-my-position! callback")
-  (log {:lat (latitude position) :lng (longitude position)})
   (swap! state merge
          {:lat (latitude position)
           :lng (longitude position)}))
@@ -119,6 +139,18 @@
                        :mapTypeId google.maps.MapTypeId.ROADMAP}))
     (.fitBounds bounds)))
 
+(defn open-info
+  "Open an info window on gmap for mark."
+  [gmap mark]
+  (let [info (get-iw mark)]
+    (raise! info)
+    (. info open gmap mark)
+    (after #(. info close) 30000)
+    (reverse-geocode mark
+                     (fn [address]
+                       (. info setContent
+                          (str (. mark getTitle) " @<br>" address))))))
+
 (defn mark-map
   "Mark gmap with title at position."
   [gmap user]
@@ -126,23 +158,21 @@
         mark (new google.maps.Marker (clj->js {:title name
                                                :position (glatlng user)
                                                :map gmap}))
-        info (new google.maps.InfoWindow (clj->js {:content name}))
-        click #(. info open gmap mark)]
+        info (new google.maps.InfoWindow (clj->js {:content name}))]
     (set-iw mark info)
-    (google.maps.event.addListener mark "click" click)
+    (google.maps.event.addListener mark "click" #(open-info gmap mark))
     mark))
 
 (defn update-user
-  "Update my-marks for user with id.  Return the user's mark."
+  "Update marks for user with id.  Return the user's mark."
   [id user]
-  (if-let [mark (get @my-marks id)]
+  (if-let [mark (get @marks id)]
     (let [name (:name user)]
-      (. (get-iw mark) setContent name)
       (doto mark
         (.setPosition (glatlng user))
         (.setTitle name)))
     (let [mark (mark-map @my-map user)]
-      (swap! my-marks (fn [m] (assoc m id mark)))
+      (swap! marks (fn [m] (assoc m id mark)))
       mark)))
 
 (defn update-user-marks
@@ -150,7 +180,7 @@
   []
   (request-update
    (fn [response]
-     (log {"update-user-marks callback" (count (:users response))})
+     (log {"update-user-marks" (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
 
 (defn initialize
@@ -163,8 +193,8 @@
      (remember! :id (first (keys (:you response))))
      (swap! my-map #(make-google-map (bound-response response)))
      (google.maps.event.addListenerOnce
-      @my-map "idle" #(periodically update-user-marks 60000))
+      @my-map "idle" #(periodically update-user-marks 3000))
      (letfn [(mark [[id user]] [id (mark-map @my-map user)])]
-       (swap! my-marks (fn [m] (into m (map mark (:users response)))))))))
+       (swap! marks (fn [m] (into m (map mark (:users response)))))))))
 
 (google.maps.event.addDomListener js/window "load" initialize)
