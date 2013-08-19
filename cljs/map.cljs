@@ -25,16 +25,6 @@
        (glatlng (:lat position) (:lng position))
        (glatlng (latitude position) (longitude position)))))
 
-;; Add an Marker.info-window property with default null.
-;;
-(defprotocol IHasInfoWindow
-  (get-iw [this])
-  (set-iw [this iw]))
-(extend-type google.maps.Marker
-  IHasInfoWindow
-  (get-iw [this] (. this -info-window))
-  (set-iw [this iw] (set! (. this -info-window) iw)))
-
 (def ^{:doc "A google.maps.Map that gets set once in initialize."}
   my-map (atom nil))
 
@@ -137,26 +127,25 @@
 
 (defn open-info
   "Open an info window on gmap for mark."
-  [gmap mark]
-  (let [info (get-iw mark)]
+  [gmap mark name]
+  (let [info (new google.maps.InfoWindow (clj->js {:content name}))]
     (raise! info)
     (. info open gmap mark)
     (after #(. info close) 30000)
     (reverse-geocode mark
                      (fn [address]
                        (. info setContent
-                          (str (. mark getTitle) " @<br>" address))))))
+                          (str name " @<br>" address))))))
 
 (defn mark-map
-  "Mark gmap with title at position."
+  "Mark gmap for user."
   [gmap user]
   (let [name (:name user)
-        mark (new google.maps.Marker (clj->js {:title name
-                                               :position (glatlng user)
-                                               :map gmap}))
-        info (new google.maps.InfoWindow (clj->js {:content name}))]
-    (set-iw mark info)
-    (google.maps.event.addListener mark "click" #(open-info gmap mark))
+        mark (new google.maps.Marker
+                  (clj->js {:title name
+                            :position (glatlng user)
+                            :map gmap}))]
+    (google.maps.event.addListener mark "click" #(open-info gmap mark name))
     mark))
 
 (defn update-user
