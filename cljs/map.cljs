@@ -28,6 +28,16 @@
        (glatlng (:lat position) (:lng position))
        (glatlng (latitude position) (longitude position)))))
 
+;; Add an Marker.info-window property with default null.
+;;
+(defprotocol IHasInfoWindow
+  (get-iw [this])
+  (set-iw [this iw]))
+(extend-type google.maps.Marker
+  IHasInfoWindow
+  (get-iw [this] (. this -info-window))
+  (set-iw [this iw] (set! (. this -info-window) iw)))
+
 (def ^{:doc "A google.maps.Map that gets set once in initialize."}
   my-map (atom nil))
 
@@ -46,9 +56,9 @@
     (. js/localStorage setItem "state" (pr-str value))))
 
 (defn log
-  "Log stuff on the JS console."
+  "Log stuff on the JS console.  Maps do well."
   [stuff]
-  (. (. js/window -console) log (clj->js stuff)))
+  (.. js/window -console (log (clj->js stuff))))
 
 (defn after
   "Call f after ms milliseconds."
@@ -112,18 +122,25 @@
 (defn mark-map
   "Mark gmap with title at position."
   [gmap user]
-  (new google.maps.Marker
-       (clj->js {:title (:name user)
-                 :position (glatlng user)
-                 :map gmap})))
+  (let [name (:name user)
+        mark (new google.maps.Marker (clj->js {:title name
+                                               :position (glatlng user)
+                                               :map gmap}))
+        info (new google.maps.InfoWindow (clj->js {:content name}))
+        click #(. info open gmap mark)]
+    (set-iw mark info)
+    (google.maps.event.addListener mark "click" click)
+    mark))
 
 (defn update-user
   "Update my-marks for user with id.  Return the user's mark."
   [id user]
   (if-let [mark (get @my-marks id)]
-    (doto mark
-      (.setPosition (glatlng user))
-      (.setTitle (:name user)))
+    (let [name (:name user)]
+      (. (get-iw mark) setContent name)
+      (doto mark
+        (.setPosition (glatlng user))
+        (.setTitle name)))
     (let [mark (mark-map @my-map user)]
       (swap! my-marks (fn [m] (assoc m id mark)))
       mark)))
@@ -146,7 +163,7 @@
      (remember! :id (first (keys (:you response))))
      (swap! my-map #(make-google-map (bound-response response)))
      (google.maps.event.addListenerOnce
-      @my-map "idle" #(periodically update-user-marks 2000))
+      @my-map "idle" #(periodically update-user-marks 60000))
      (letfn [(mark [[id user]] [id (mark-map @my-map user)])]
        (swap! my-marks (fn [m] (into m (map mark (:users response)))))))))
 
