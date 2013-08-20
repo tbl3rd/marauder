@@ -1,49 +1,7 @@
 (ns marauder.map
   (:require [cljs.reader :as reader-but-who-cares?]
-            [marauder.icon :as icon]))
-
-(defn log
-  "Log stuff on the JS console.  Maps do well."
-  [stuff]
-  (.. js/window -console (log (clj->js stuff))))
-
-(defn get-by-dom-id
-  "The dom element identified by dom-id."
-  [dom-id]
-  (. js/document getElementById (name dom-id)))
-
-(defn add-dom-listener
-  "Call f when event fires on div."
-  [div event f]
-  (google.maps.event.addDomListener div (name event) f))
-
-(defn add-maps-listener-once
-  "Call f when event fires on obj the first time."
-  [obj event f]
-  (google.maps.event.addListenerOnce obj (name event) f))
-
-;; Hide differences between GoogleMaps and HTML5 geoposition types.
-;;
-(defprotocol ILatitudeLongitude
-  (latitude [p])
-  (longitude [p]))
-(extend-type google.maps.LatLng
-  ILatitudeLongitude
-  (latitude [p] (.lat p))
-  (longitude [p] (.lng p)))
-(extend-protocol ILatitudeLongitude
-  object
-  (latitude [p] (.. p -coords -latitude))
-  (longitude [p] (.. p -coords -longitude)))
-
-(defn glatlng
-  "A Google Maps LatLng from whatever."
-  ([lat lng]
-     (new google.maps.LatLng lat lng))
-  ([position]
-     (if (map? position)
-       (glatlng (:lat position) (:lng position))
-       (glatlng (latitude position) (longitude position)))))
+            [marauder.icon :as icon]
+            [marauder.util :as util]))
 
 (def ^{:doc "A google.maps.Map that gets set once in initialize."}
   my-map (atom nil))
@@ -59,66 +17,17 @@
 (defn remember!
   "Remember that key k has value v across sessions."
   [k v]
-  (log {k v})
+  (util/log {k v})
   (let [value (swap! state assoc k v)]
     (. js/localStorage setItem "state" (pr-str value))))
-
-(def ^{:doc "A google.maps.Geocoder set once from reverse-geocode."}
-  geocoder (atom nil))
-
-(defn reverse-geocode
-  "Call handle with the address of mark."
-  [mark handle]
-  (if (nil? @geocoder)
-    (swap! geocoder (constantly (new google.maps.Geocoder))))
-  (. @geocoder geocode (clj->js {:latLng (. mark getPosition)})
-     (fn [results status]
-       (if (= status google.maps.GeocoderStatus.OK)
-         (if-let [result (aget results 0)]
-           (handle (. result -formatted-address)))))))
-
-(defn after
-  "Call f after ms milliseconds."
-  [f ms]
-  (js/setTimeout f ms))
-
-(defn periodically
-  "After ms milliseconds call f every ms milliseconds."
-  [f ms]
-  (after (fn [] (f) (periodically f ms)) ms))
-
-(def ^{:doc "The maximum Z index established by raise! so far."}
-  max-z-index-for-raise
-  (atom google.maps.MAX_ZINDEX))
-(defn raise!
-  [thing]
-  (. thing setZIndex (swap! max-z-index-for-raise inc)))
 
 (defn bound-response
   "Get the LatLngBounds of all the positions in the update response."
   [response]
   (let [bounds (new google.maps.LatLngBounds)
         users (vals (:users response))]
-    (doseq [position (map glatlng users)] (. bounds extend position))
+    (doseq [position (map util/glatlng users)] (. bounds extend position))
     bounds))
-
-(defn post
-  "POST request map to uri then pass response to handle-response."
-  [uri request handle-response]
-  (let [connection (new goog.net.XhrIo)]
-    (goog.events.listen connection goog.net.EventType/COMPLETE
-                        #(handle-response
-                          (cljs.reader/read-string
-                           (. connection getResponseText))))
-    (. connection send uri "POST" request
-       (clj->js {"Content-type" "application/edn"}))))
-
-(defn update-my-position!
-  "Update my state with position."
-  [position]
-  (swap! state merge
-         {:lat (latitude position)
-          :lng (longitude position)}))
 
 (defn request-update
   "Request an update from the server and (handle response)."
@@ -127,16 +36,16 @@
       (. -geolocation)
       (. getCurrentPosition
          (fn [position]
-           (post "/update"
-                 (select-keys (update-my-position! position)
-                              [:id :name :lat :lng])
-                 handle)))))
+           (util/post "/update"
+                      (select-keys (swap! state merge (util/mlatlng position))
+                                   [:id :name :lat :lng])
+                      handle)))))
 
 (defn make-google-map
   "A Google Map covering the region defined by bounds."
   [bounds]
   (doto (new google.maps.Map
-             (get-by-dom-id :googlemapcanvas)
+             (util/by-dom-id :googlemapcanvas)
              (clj->js {:center (. bounds getCenter)
                        :mapTypeId google.maps.MapTypeId.ROADMAP}))
     (.fitBounds bounds)))
@@ -145,13 +54,13 @@
   "Open an info window on gmap for mark."
   [gmap mark name]
   (let [info (new google.maps.InfoWindow (clj->js {:content name}))]
-    (raise! info)
+    (util/raise info)
     (. info open gmap mark)
-    (after #(. info close) 30000)
-    (reverse-geocode mark
-                     (fn [address]
-                       (. info setContent
-                          (str name " @<br>" address))))))
+    (util/after #(. info close) 30000)
+    (util/reverse-geocode mark
+                          (fn [address]
+                            (. info setContent
+                               (str name " @<br>" address))))))
 
 (defn mark-map
   "Mark gmap for user with id."
@@ -163,7 +72,7 @@
         mark (new google.maps.Marker
                   (clj->js {:title name
                             :icon icon
-                            :position (glatlng user)
+                            :position (util/glatlng user)
                             :animation google.maps.Animation.DROP
                             :map gmap}))]
     (google.maps.event.addListener mark "click" #(open-info gmap mark name))
@@ -175,7 +84,7 @@
   (if-let [mark (get @marks id)]
     (let [name (:name user)]
       (doto mark
-        (.setPosition (glatlng user))
+        (.setPosition (util/glatlng user))
         (.setTitle name)))
     (let [mark (mark-map @my-map id user)]
       (swap! marks (fn [m] (assoc m id mark)))
@@ -186,7 +95,7 @@
   []
   (request-update
    (fn [response]
-     (log {:update-user-marks (count (:users response))})
+     (util/log {:update-user-marks (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
 
 (defn bound-marks
@@ -202,11 +111,13 @@
   []
   (let [controls (. @my-map -controls)
         corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
-        div (get-by-dom-id :marauder-controls)
-        whereami (get-by-dom-id :marauder-whereami)
-        everyone (get-by-dom-id :marauder-everyone)]
-    (add-dom-listener whereami :click #(. @my-map setCenter (glatlng @state)))
-    (add-dom-listener everyone :click #(bound-marks @my-map @marks))
+        div (util/by-dom-id :marauder-controls)
+        whereami (util/by-dom-id :marauder-whereami)
+        everyone (util/by-dom-id :marauder-everyone)]
+    (util/add-listener whereami :click
+                       #(. @my-map setCenter (util/glatlng @state)))
+    (util/add-listener everyone :click
+                       #(bound-marks @my-map @marks))
     (. corner push div)))
 
 (defn initialize
@@ -214,14 +125,14 @@
   []
   (request-update
    (fn [response]
-     (log {:initialize (count (:users response))})
-     (log (pr-str response))
+     (util/log {:initialize (count (:users response))})
+     (util/log (pr-str response))
      (remember! :id (first (keys (:you response))))
      (swap! my-map #(make-google-map (bound-response response)))
-     (add-maps-listener-once @my-map :idle
-                             #(periodically update-user-marks 60000))
+     (util/add-listener-once @my-map :idle
+                             #(util/periodically update-user-marks 60000))
      (letfn [(mark [[id user]] [id (mark-map @my-map id user)])]
        (swap! marks (fn [m] (into m (map mark (:users response))))))
      (add-marauder-controls))))
 
-(add-dom-listener js/window :load initialize)
+(util/add-listener js/window :load initialize)
