@@ -7,6 +7,21 @@
   [stuff]
   (.. js/window -console (log (clj->js stuff))))
 
+(defn get-by-dom-id
+  "The dom element identified by dom-id."
+  [dom-id]
+  (. js/document getElementById (name dom-id)))
+
+(defn add-dom-listener
+  "Call f when event fires on div."
+  [div event f]
+  (google.maps.event.addDomListener div (name event) f))
+
+(defn add-maps-listener-once
+  "Call f when event fires on obj the first time."
+  [obj event f]
+  (google.maps.event.addListenerOnce obj (name event) f))
+
 ;; Hide differences between GoogleMaps and HTML5 geoposition types.
 ;;
 (defprotocol ILatitudeLongitude
@@ -121,7 +136,7 @@
   "A Google Map covering the region defined by bounds."
   [bounds]
   (doto (new google.maps.Map
-             (. js/document getElementById "googlemapcanvas")
+             (get-by-dom-id :googlemapcanvas)
              (clj->js {:center (. bounds getCenter)
                        :mapTypeId google.maps.MapTypeId.ROADMAP}))
     (.fitBounds bounds)))
@@ -141,8 +156,6 @@
 (defn mark-map
   "Mark gmap for user with id."
   [gmap id user]
-  (log {:call "mark-map" :gmap gmap :id id :user user :state (:id @state)})
-  (log {:equal (= id (:id @state))})
   (let [name (:name user)
         icon (if (= id (:id @state))
                (icon/get-icon-for-me)
@@ -173,7 +186,7 @@
   []
   (request-update
    (fn [response]
-     (log {"update-user-marks" (count (:users response))})
+     (log {:update-user-marks (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
 
 (defn bound-marks
@@ -189,29 +202,26 @@
   []
   (let [controls (. @my-map -controls)
         corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
-        div (. js/document getElementById "marauder-controls")
-        whereami (. js/document getElementById "marauder-whereami")
-        everyone (. js/document getElementById "marauder-everyone")]
-    (log {:f "position-map-controls" :div div})
-    (google.maps.event.addDomListener whereami "click"
-                                      #(. @my-map setCenter (glatlng @state)))
-    (google.maps.event.addDomListener everyone "click"
-                                      #(bound-marks @my-map @marks))
+        div (get-by-dom-id :marauder-controls)
+        whereami (get-by-dom-id :marauder-whereami)
+        everyone (get-by-dom-id :marauder-everyone)]
+    (add-dom-listener whereami :click #(. @my-map setCenter (glatlng @state)))
+    (add-dom-listener everyone :click #(bound-marks @my-map @marks))
     (. corner push div)))
 
 (defn initialize
-  "Open a ROADMAP on Boston in :div#googlemapcanvas with everyone marked."
+  "Open a ROADMAP with everyone marked."
   []
   (request-update
    (fn [response]
-     (log {"initialize" (count (:users response))})
+     (log {:initialize (count (:users response))})
      (log (pr-str response))
      (remember! :id (first (keys (:you response))))
      (swap! my-map #(make-google-map (bound-response response)))
-     (google.maps.event.addListenerOnce
-      @my-map "idle" #(periodically update-user-marks 60000))
+     (add-maps-listener-once @my-map :idle
+                             #(periodically update-user-marks 60000))
      (letfn [(mark [[id user]] [id (mark-map @my-map id user)])]
        (swap! marks (fn [m] (into m (map mark (:users response))))))
      (add-marauder-controls))))
 
-(google.maps.event.addDomListener js/window "load" initialize)
+(add-dom-listener js/window :load initialize)
