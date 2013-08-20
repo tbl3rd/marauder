@@ -176,13 +176,28 @@
      (log {"update-user-marks" (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
 
-(defn position-map-controls
-  [gmap]
-  (let [controls (. gmap -controls)
-        right-top (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
-        div (. js/document getElementById "marauder-controls")]
+(defn bound-marks
+  "Pan gmap to show all marks."
+  [gmap marks]
+  (let [bounds (new google.maps.LatLngBounds)]
+    (doseq [position (map (fn [m] (. m getPosition)) (vals marks))]
+      (. bounds extend position))
+    (. gmap fitBounds bounds)))
+
+(defn add-marauder-controls
+  "Add the marauder-control div to the RIGHT-BOTTOM of gmap."
+  []
+  (let [controls (. @my-map -controls)
+        corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
+        div (. js/document getElementById "marauder-controls")
+        whereami (. js/document getElementById "marauder-whereami")
+        everyone (. js/document getElementById "marauder-everyone")]
     (log {:f "position-map-controls" :div div})
-    (. right-top push div)))
+    (google.maps.event.addDomListener whereami "click"
+                                      #(. @my-map setCenter (glatlng @state)))
+    (google.maps.event.addDomListener everyone "click"
+                                      #(bound-marks @my-map @marks))
+    (. corner push div)))
 
 (defn initialize
   "Open a ROADMAP on Boston in :div#googlemapcanvas with everyone marked."
@@ -195,8 +210,8 @@
      (swap! my-map #(make-google-map (bound-response response)))
      (google.maps.event.addListenerOnce
       @my-map "idle" #(periodically update-user-marks 60000))
-     (position-map-controls @my-map)
      (letfn [(mark [[id user]] [id (mark-map @my-map id user)])]
-       (swap! marks (fn [m] (into m (map mark (:users response)))))))))
+       (swap! marks (fn [m] (into m (map mark (:users response))))))
+     (add-marauder-controls))))
 
 (google.maps.event.addDomListener js/window "load" initialize)
