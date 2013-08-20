@@ -2,6 +2,11 @@
   (:require [cljs.reader :as reader-but-who-cares?]
             [marauder.icon :as icon]))
 
+(defn log
+  "Log stuff on the JS console.  Maps do well."
+  [stuff]
+  (.. js/window -console (log (clj->js stuff))))
+
 ;; Hide differences between GoogleMaps and HTML5 geoposition types.
 ;;
 (defprotocol ILatitudeLongitude
@@ -39,6 +44,7 @@
 (defn remember!
   "Remember that key k has value v across sessions."
   [k v]
+  (log {k v})
   (let [value (swap! state assoc k v)]
     (. js/localStorage setItem "state" (pr-str value))))
 
@@ -55,11 +61,6 @@
        (if (= status google.maps.GeocoderStatus.OK)
          (if-let [result (aget results 0)]
            (handle (. result -formatted-address)))))))
-
-(defn log
-  "Log stuff on the JS console.  Maps do well."
-  [stuff]
-  (.. js/window -console (log (clj->js stuff))))
 
 (defn after
   "Call f after ms milliseconds."
@@ -138,12 +139,19 @@
                           (str name " @<br>" address))))))
 
 (defn mark-map
-  "Mark gmap for user."
-  [gmap user]
+  "Mark gmap for user with id."
+  [gmap id user]
+  (log {:call "mark-map" :gmap gmap :id id :user user :state (:id @state)})
+  (log {:equal (= id (:id @state))})
   (let [name (:name user)
+        icon (if (= id (:id @state))
+               (icon/get-icon-for-me)
+               (icon/get-icon-for name))
         mark (new google.maps.Marker
                   (clj->js {:title name
+                            :icon icon
                             :position (glatlng user)
+                            :animation google.maps.Animation.DROP
                             :map gmap}))]
     (google.maps.event.addListener mark "click" #(open-info gmap mark name))
     mark))
@@ -156,7 +164,7 @@
       (doto mark
         (.setPosition (glatlng user))
         (.setTitle name)))
-    (let [mark (mark-map @my-map user)]
+    (let [mark (mark-map @my-map id user)]
       (swap! marks (fn [m] (assoc m id mark)))
       mark)))
 
@@ -167,6 +175,14 @@
    (fn [response]
      (log {"update-user-marks" (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
+
+(defn position-map-controls
+  [gmap]
+  (let [controls (. gmap -controls)
+        right-top (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
+        div (. js/document getElementById "marauder-controls")]
+    (log {:f "position-map-controls" :div div})
+    (. right-top push div)))
 
 (defn initialize
   "Open a ROADMAP on Boston in :div#googlemapcanvas with everyone marked."
@@ -179,7 +195,8 @@
      (swap! my-map #(make-google-map (bound-response response)))
      (google.maps.event.addListenerOnce
       @my-map "idle" #(periodically update-user-marks 60000))
-     (letfn [(mark [[id user]] [id (mark-map @my-map user)])]
+     (position-map-controls @my-map)
+     (letfn [(mark [[id user]] [id (mark-map @my-map id user)])]
        (swap! marks (fn [m] (into m (map mark (:users response)))))))))
 
 (google.maps.event.addDomListener js/window "load" initialize)

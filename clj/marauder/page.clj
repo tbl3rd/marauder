@@ -33,5 +33,12 @@
 (defn page []
   (layout
    [:div#googlemapcanvas]
+   [:div#marauder-controls
+    [:div#marauder-whereami {:title "Where am I?"}
+     [:img {:src "img/whereami.png" :alt "whereami"}]]
+    [:div#marauder-everyone {:title "Where is everyone?"}
+     [:img {:src "img/marker.png" :alt "everyone"}]]
+    [:div#marauder-place {:title "Right here!"}
+     [:img {:src "img/dd-start.png" :alt "place"}]]]
    (include-js "js/marauder.js")
    (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])))
