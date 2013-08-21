@@ -18,8 +18,9 @@
           ["html { height: 100%; }"
            "body { height: 100%; }"
            "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"
-           "#marauder-searchbox { display: none; width: 50%; }"
-           "#marauder-where { width: 100%; }"]))
+           "#marauder-buttons { text-align: right; margin: 5px; width: 50%; }"
+           "#marauder-search { display: none; margin: 5px; width: 50%; }"
+           "#marauder-place { vertical-align: middle; }"]))
 
 (defn- layout [& content]
   (html5
@@ -32,25 +33,23 @@
     (include-js (google-maps-url (google-maps-api-key) false))]
    [:body content]))
 
-(defn- marauder-searchbox
+(defn- marauder-buttons
   []
-  [:div#marauder-searchbox
-   [:input#marauder-where {:type "text" :placeholder "Search for ..."}]])
-
-(defn- marauder-controls
-  []
-  [:div#marauder-controls
+  [:div#marauder-buttons
    [:div#marauder-whereami {:title "Where am I?"}
     [:img {:src "img/whereami.png" :alt "whereami"}]]
    [:div#marauder-everyone {:title "Where is everyone?"}
     [:img {:src "img/marker.png" :alt "everyone"}]]
-   [:div#marauder-place {:title "Right here!"}
-    [:img {:src "img/dd-start.png" :alt "place"}]]])
+   [:span
+    [:input#marauder-search {:type "text"
+                             :placeholder "Search for ..."}]
+    [:img#marauder-place {:title "Right here!"
+                          :src "img/dd-start.png"
+                          :alt "place"}]]])
 
 (defn page []
   (layout
    [:div#googlemapcanvas]
-   (marauder-searchbox)
-   (marauder-controls)
+   (marauder-buttons)
    (include-js "js/marauder.js")
    (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])))

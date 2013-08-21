@@ -111,26 +111,23 @@
   []
   (let [controls (. @my-map -controls)
         rb-corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
-        rc-corner (aget controls google.maps.ControlPosition.RIGHT-CENTER)
-        buttons  (util/by-dom-id :marauder-controls)
+        buttons  (util/by-dom-id :marauder-buttons)
         whereami (util/by-dom-id :marauder-whereami)
         everyone (util/by-dom-id :marauder-everyone)
         place    (util/by-dom-id :marauder-place)
-        search   (util/by-dom-id :marauder-searchbox)
-        text     (util/by-dom-id :marauder-where)
-        box (new google.maps.places.SearchBox text)]
+        search   (util/by-dom-id :marauder-search)
+        box (new google.maps.places.SearchBox search)]
     (util/add-listener whereami "click"
                        #(. @my-map setCenter (util/glatlng @state)))
     (util/add-listener everyone "click"
                        #(bound-marks @my-map @marks))
     (util/add-listener place "click"
-                       #(set! (.. search -style -display) "block"))
+                       #(set! (.. search -style -display) "inline-block"))
     (util/add-listener box "places_changed"
                        (fn []
                          (doseq [p (. box getPlaces)] (util/log p))
                          (set! (.. search -style -display) "none")))
-    (. rb-corner push buttons)
-    (. rc-corner push search)))
+    (. rb-corner push buttons)))
 
 (defn initialize
   "Open a ROADMAP with everyone marked."
