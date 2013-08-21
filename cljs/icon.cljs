@@ -39,5 +39,9 @@
 (defn get-icon-for-me
   "Return the you-are-here icon to mark the owner of the client."
   []
-  "img/arrow-green.png"
   "img/whereami.png")
+
+(defn get-icon-for-place
+  "Return an icon to mark place."
+  [place]
+  "img/dd-start.png")

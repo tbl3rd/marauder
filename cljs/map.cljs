@@ -52,30 +52,38 @@
 
 (defn open-info
   "Open an info window on gmap for mark."
-  [gmap mark name]
-  (let [info (new google.maps.InfoWindow (clj->js {:content name}))]
-    (util/raise info)
-    (. info open gmap mark)
-    (util/after #(. info close) 30000)
-    (util/reverse-geocode mark
-                          (fn [address]
-                            (. info setContent
-                               (str name " @<br>" address))))))
+  ([gmap mark address]
+     (let [name (. mark getTitle)
+           info (new google.maps.InfoWindow (clj->js {:content name}))]
+       (util/raise info)
+       (. info open gmap mark)
+       (. info setContent (str name " @<br>" address))
+       (util/after #(. info close) 30000)
+       info))
+  ([gmap mark]
+     (util/reverse-geocode
+      mark
+      (fn [address] (open-info gmap mark address)))))
 
-(defn mark-map
+(defn mark-place
+  "Mark gmap for place."
+  [gmap place]
+  (let [address (. place -formatted-address)
+        name (or (. place -name) "Here")
+        icon (icon/get-icon-for-place place)
+        mark (util/new-marker gmap (.. place -geometry -location) icon name)]
+    (util/add-listener mark "click" #(open-info gmap mark address))
+    mark))
+
+(defn mark-user
   "Mark gmap for user with id."
   [gmap id user]
   (let [name (:name user)
         icon (if (= id (:id @state))
                (icon/get-icon-for-me)
                (icon/get-icon-for name))
-        mark (new google.maps.Marker
-                  (clj->js {:title name
-                            :icon icon
-                            :position (util/glatlng user)
-                            :animation google.maps.Animation.DROP
-                            :map gmap}))]
-    (google.maps.event.addListener mark "click" #(open-info gmap mark name))
+        mark (util/new-marker gmap (util/glatlng user) icon name)]
+    (util/add-listener mark "click" #(open-info gmap mark))
     mark))
 
 (defn update-user
@@ -86,7 +94,7 @@
       (doto mark
         (.setPosition (util/glatlng user))
         (.setTitle name)))
-    (let [mark (mark-map @my-map id user)]
+    (let [mark (mark-user @my-map id user)]
       (swap! marks (fn [m] (assoc m id mark)))
       mark)))
 
@@ -135,8 +143,8 @@
     (util/add-listener box "places_changed"
                        (fn []
                          (. box setBounds (. @my-map getBounds))
-                         (if-let [p (first (. box getPlaces))]
-                           (util/log p))
+                         (if-let [place (first (. box getPlaces))]
+                           (mark-place @my-map place))
                          (set! (.. search -style -display) "none")))
     (. rb-corner push buttons)))
 
@@ -151,7 +159,7 @@
      (swap! my-map #(make-google-map (bound-response response)))
      (util/add-listener-once @my-map :idle
                              #(util/periodically update-user-marks 60000))
-     (letfn [(mark [[id user]] [id (mark-map @my-map id user)])]
+     (letfn [(mark [[id user]] [id (mark-user @my-map id user)])]
        (swap! marks (fn [m] (into m (map mark (:users response))))))
      (add-marauder-controls))))
 
