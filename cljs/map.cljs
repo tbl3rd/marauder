@@ -116,21 +116,27 @@
         place    (util/by-dom-id :marauder-place)
         everyone (util/by-dom-id :marauder-everyone)
         whereami (util/by-dom-id :marauder-whereami)
-        box (new google.maps.places.SearchBox search)]
+        box (new google.maps.places.SearchBox search)
+        toggle-search (fn [] (set! (.. search -style -display)
+                                   (get {"none" "inline-block"}
+                                        (.. search -style -display) "none")))
+        clear-search (fn [] (goog.dom.setProperties search
+                                                    (js-obj "value" "")))]
     (util/add-listener whereami "click"
                        #(. @my-map setCenter (util/glatlng @state)))
     (util/add-listener everyone "click"
                        #(bound-marks @my-map @marks))
+    (toggle-search)
     (util/add-listener place "click"
                        (fn []
-                         (set! (.. search -style -display)
-                               (get {"none" "inline-block"}
-                                    (.. search -style -display) "none"))
+                         (toggle-search)
+                         (clear-search)
                          (. search focus)))
     (util/add-listener box "places_changed"
                        (fn []
                          (. box setBounds (. @my-map getBounds))
-                         (doseq [p (. box getPlaces)] (util/log p))
+                         (if-let [p (first (. box getPlaces))]
+                           (util/log p))
                          (set! (.. search -style -display) "none")))
     (. rb-corner push buttons)))
 

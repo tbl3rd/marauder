@@ -20,7 +20,7 @@
            "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"
            "#marauder-buttons { text-align: right; margin: 5px; }"
            "#marauder-find { margin-bottom: 5px; }"
-           "#marauder-search { display: none; margin: 5px; width: 300px; }"
+           "#marauder-search { margin: 5px; width: 300px; }"
            "#marauder-place { vertical-align: middle; }"]))
 
 (defn- layout [& content]
