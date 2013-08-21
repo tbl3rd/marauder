@@ -123,11 +123,12 @@
                        #(bound-marks @my-map @marks))
     (util/add-listener place "click"
                        (fn []
-                         (if (= "none" (.. search -style -display))
-                           (set! (.. search -style -display) "inline-block")
-                           (set! (.. search -style -display) "none"))))
+                         (set! (.. search -style -display)
+                               (get {"none" "inline-block"}
+                                    (.. search -style -display) "none"))))
     (util/add-listener box "places_changed"
                        (fn []
+                         (. box setBounds (. @my-map getBounds))
                          (doseq [p (. box getPlaces)] (util/log p))
                          (set! (.. search -style -display) "none")))
     (. rb-corner push buttons)))
