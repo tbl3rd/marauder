@@ -19,6 +19,7 @@
            "body { height: 100%; }"
            "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"
            "#marauder-buttons { text-align: right; margin: 5px; width: 50%; }"
+           "#marauder-find { margin-bottom: 5px; }"
            "#marauder-search { display: none; margin: 5px; width: 50%; }"
            "#marauder-place { vertical-align: middle; }"]))
 
@@ -36,16 +37,14 @@
 (defn- marauder-buttons
   []
   [:div#marauder-buttons
-   [:div#marauder-whereami {:title "Where am I?"}
-    [:img {:src "img/whereami.png" :alt "whereami"}]]
+   [:div#marauder-find {:title "Where to?"}
+    [:span
+     [:input#marauder-search {:type "text" :placeholder "Search for ..."}]
+     [:img#marauder-place {:src "img/dd-start.png" :alt "place"}]]]
    [:div#marauder-everyone {:title "Where is everyone?"}
     [:img {:src "img/marker.png" :alt "everyone"}]]
-   [:span
-    [:input#marauder-search {:type "text"
-                             :placeholder "Search for ..."}]
-    [:img#marauder-place {:title "Right here!"
-                          :src "img/dd-start.png"
-                          :alt "place"}]]])
+   [:div#marauder-whereami {:title "Where am I?"}
+    [:img {:src "img/whereami.png" :alt "whereami"}]]])
 
 (defn page []
   (layout

@@ -112,17 +112,20 @@
   (let [controls (. @my-map -controls)
         rb-corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
         buttons  (util/by-dom-id :marauder-buttons)
-        whereami (util/by-dom-id :marauder-whereami)
-        everyone (util/by-dom-id :marauder-everyone)
-        place    (util/by-dom-id :marauder-place)
         search   (util/by-dom-id :marauder-search)
+        place    (util/by-dom-id :marauder-place)
+        everyone (util/by-dom-id :marauder-everyone)
+        whereami (util/by-dom-id :marauder-whereami)
         box (new google.maps.places.SearchBox search)]
     (util/add-listener whereami "click"
                        #(. @my-map setCenter (util/glatlng @state)))
     (util/add-listener everyone "click"
                        #(bound-marks @my-map @marks))
     (util/add-listener place "click"
-                       #(set! (.. search -style -display) "inline-block"))
+                       (fn []
+                         (if (= "none" (.. search -style -display))
+                           (set! (.. search -style -display) "inline-block")
+                           (set! (.. search -style -display) "none"))))
     (util/add-listener box "places_changed"
                        (fn []
                          (doseq [p (. box getPlaces)] (util/log p))
