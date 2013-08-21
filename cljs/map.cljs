@@ -125,7 +125,8 @@
                        (fn []
                          (set! (.. search -style -display)
                                (get {"none" "inline-block"}
-                                    (.. search -style -display) "none"))))
+                                    (.. search -style -display) "none"))
+                         (. search focus)))
     (util/add-listener box "places_changed"
                        (fn []
                          (. box setBounds (. @my-map getBounds))
