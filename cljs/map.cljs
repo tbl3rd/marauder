@@ -110,15 +110,27 @@
   "Add the marauder-control div to the RIGHT-BOTTOM of gmap."
   []
   (let [controls (. @my-map -controls)
-        corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
-        div (util/by-dom-id :marauder-controls)
+        rb-corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
+        rc-corner (aget controls google.maps.ControlPosition.RIGHT-CENTER)
+        buttons  (util/by-dom-id :marauder-controls)
         whereami (util/by-dom-id :marauder-whereami)
-        everyone (util/by-dom-id :marauder-everyone)]
-    (util/add-listener whereami :click
+        everyone (util/by-dom-id :marauder-everyone)
+        place    (util/by-dom-id :marauder-place)
+        search   (util/by-dom-id :marauder-searchbox)
+        text     (util/by-dom-id :marauder-where)
+        box (new google.maps.places.SearchBox text)]
+    (util/add-listener whereami "click"
                        #(. @my-map setCenter (util/glatlng @state)))
-    (util/add-listener everyone :click
+    (util/add-listener everyone "click"
                        #(bound-marks @my-map @marks))
-    (. corner push div)))
+    (util/add-listener place "click"
+                       #(set! (.. search -style -display) "block"))
+    (util/add-listener box "places_changed"
+                       (fn []
+                         (doseq [p (. box getPlaces)] (util/log p))
+                         (set! (.. search -style -display) "none")))
+    (. rb-corner push buttons)
+    (. rc-corner push search)))
 
 (defn initialize
   "Open a ROADMAP with everyone marked."
