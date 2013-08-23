@@ -1,55 +1,18 @@
 (ns marauder.routes
   (:require [clojure.string :as s]
-            [clj-http.client :as client]
             [clojure.edn]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :as route]
             [compojure.handler :as handler]
-            [marauder.page :as page]))
-
-(defn initial-state []
-  {:users
-   {0 {:name "Boston"    :lat 42.369706 :lng -71.060257}
-    1 {:name "Cambridge" :lat 42.378836 :lng -71.110436}
-    2 {:name "home"      :lat 42.382545 :lng -71.137122}
-    3 {:name "work"      :lat 42.366931 :lng -71.091352}}
-   :places
-   {}})
-
-(def ^{:doc "Everything tracked."}
-  state
-  (atom (initial-state)))
+            [marauder.map :as map]
+            [marauder.qr :as qr]
+            [marauder.state :as state]))
 
 (defn edn-response [data & [status]]
+  "An HTTP response of EDN data with status."
   {:status (or status 200)
    :headers {"Content-type" "application/edn"}
    :body (pr-str data)})
-
-(defn merge-nested
-  "Merge a sequence of nested maps into a single nested map.
-  Last wins as in merge and merge-with."
-  [& maps]
-  (if (every? map? maps)
-    (apply merge-with merge-nested maps)
-    (last maps)))
-
-(defn new-untagged-uuid [] (str (java.util.UUID/randomUUID)))
-(def next-id (atom (count (:users @state))))
-(defn next-id-for-debugging
-  "Return a new integer ID."
-  []
-  (let [result @next-id]
-    (swap! next-id inc)))
-
-(defn update-user
-  "Update state with user position in update."
-  [update]
-  (println "update-user" update)
-  (let [id (or (:id update) (next-id-for-debugging))
-        uwoid (dissoc update :id)
-        merger (fn [s] (merge-nested s {:users {id uwoid}}))
-        new-state (swap! state merger)]
-    (assoc new-state :you {id uwoid})))
 
 (defn wrap-log
   "Log some keys from request to the server console."
@@ -73,16 +36,17 @@
 
 (defroutes routes
   (POST "/update" request
-        (edn-response (update-user (:marauder-edn request))))
+        (edn-response (state/update-user (:marauder-edn request))))
   (POST "/echo" request
         (pr-str "ECHO" request))
   (GET "/" []
-       (page/join-page (str (java.util.UUID/randomUUID))))
+       (qr/qr-page (str (java.util.UUID/randomUUID))))
   (GET "/join/:uuid" [uuid]
-       (page/join-page uuid))
+       (qr/qr-page uuid))
   (GET "/map/:uuid" [uuid]
-       (page/map-page uuid))
+       (map/map-page uuid))
   (route/resources "/")
+  (route/resources "/join")
   (route/resources "/map")
   (route/not-found "This is not the page you are looking for."))
 
