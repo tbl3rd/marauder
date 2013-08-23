@@ -118,7 +118,9 @@
   "Add the marauder-control div to the RIGHT-BOTTOM of gmap."
   []
   (let [controls (. @my-map -controls)
+        rt-corner (aget controls google.maps.ControlPosition.RIGHT-TOP)
         rb-corner (aget controls google.maps.ControlPosition.RIGHT-BOTTOM)
+        back     (util/by-dom-id :marauder-back)
         buttons  (util/by-dom-id :marauder-buttons)
         search   (util/by-dom-id :marauder-search)
         place    (util/by-dom-id :marauder-place)
@@ -174,6 +176,8 @@
                        (fn []
                          (remember! :name (. name-me -value))
                          (set! (.. name-me -style -display) "none")))
+    (util/log {:back back})
+    (. rt-corner push back)
     (. rb-corner push buttons)))
 
 (defn initialize

@@ -77,7 +77,9 @@
   (POST "/echo" request
         (pr-str "ECHO" request))
   (GET "/" []
-       (page/join-page))
+       (page/join-page (str (java.util.UUID/randomUUID))))
+  (GET "/join/:uuid" [uuid]
+       (page/join-page uuid))
   (GET "/map/:uuid" [uuid]
        (page/map-page uuid))
   (route/resources "/")

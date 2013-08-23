@@ -21,6 +21,7 @@
           ["html { height: 100%; }"
            "body { height: 100%; }"
            "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"
+           "#marauder-back { margin: 5px; }"
            "#marauder-buttons { text-align: right; margin: 5px; }"
            "#marauder-find { margin-bottom: 5px; }"
            "#marauder-whereami { margin-top: 5px; }"
@@ -36,39 +37,47 @@
   (str "http://chart.googleapis.com/chart?"
        (make-query-string {:cht :qr :chld :H :chs "200x200" :chl url})))
 
-(new-map-url-qr-img (str (java.util.UUID/randomUUID)))
+(defn back-to-qr-page
+  "A return to this map's QR code page control."
+  [uuid]
+  [:div#marauder-back
+   [:a {:href (str "http://localhost:3000/join/" uuid)}
+    [:img.marauder-icon {:title "Back to QR."
+                         :src "img/qr.png"
+                         :alt "QR"}]]])
 
 (defn- marauder-buttons
-  "The custom controls on the map page."
+  "The custom controls on the map page for uuid."
   [uuid]
   (let [url (str "http://localhost:3000/map/" uuid)
         qr (new-map-url-qr-img url)]
-   [:div#marauder-buttons
-    [:div#marauder-find.marauder-field
-     [:span
-      [:input#marauder-search.marauder-input {:title "Where to?"
-                                              :type "text"
-                                              :placeholder "Where is ... ?"}]
-      [:img#marauder-place.marauder-icon {:title "Where is?"
-                                          :src "img/dd-start.png"
-                                          :alt "place"}]]]
-    [:div#marauder-everyone.marauder-field
-     [:span
-      [:input#marauder-qr-code.marauder-input {:title "This map's QR code."
+    [:div#marauder-buttons
+
+     [:div#marauder-find.marauder-field
+      [:span
+       [:input#marauder-search.marauder-input {:title "Where to?"
                                                :type "text"
-                                               :value qr
-                                               :placeholder qr}]
-      [:img.marauder-icon {:title "Where is everyone?"
-                           :src "img/marker.png"
-                           :alt "everyone"}]]]
-    [:div#marauder-whereami.marauder-field
-     [:span
-      [:input#marauder-me.marauder-input {:title "Give yourself a name."
-                                          :type "text"
-                                          :placeholder "Call me Ishmael?"}]
-      [:img.marauder-icon {:title "Where am I?"
-                           :src "img/whereami.png"
-                           :alt "whereami"}]]]]))
+                                               :placeholder "Where is ... ?"}]
+       [:img#marauder-place.marauder-icon {:title "Where is?"
+                                           :src "img/dd-start.png"
+                                           :alt "place"}]]]
+     [:div#marauder-everyone.marauder-field
+      [:span
+       [:input#marauder-qr-code.marauder-input {:title "This map's QR code."
+                                                :type "text"
+                                                :value qr
+                                                :placeholder qr}]
+       [:img.marauder-icon {:title "Where is everyone?"
+                            :src "img/marker.png"
+                            :alt "everyone"}]]]
+     [:div#marauder-whereami.marauder-field
+      [:span
+       [:input#marauder-me.marauder-input {:title "Give yourself a name."
+                                           :type "text"
+                                           :placeholder "Call me Ishmael?"}]
+       [:img.marauder-icon {:title "Where am I?"
+                            :src "img/whereami.png"
+                            :alt "whereami"}]]]]))
 
 (defn map-page
   "The map page for uuid."
@@ -84,15 +93,15 @@
     (include-js (google-maps-url (google-maps-api-key) false))]
    [:body
     [:div#googlemapcanvas]
+    (back-to-qr-page uuid)
     (marauder-buttons uuid)
     (include-js "js/marauder.js")
     (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])]))
 
 (defn join-page
-  "Show a new map URL with a new UUID."
-  []
-  (let [uuid (str (java.util.UUID/randomUUID))
-        url (str "http://localhost:3000/map/" uuid)
+  "Show a new map URL with uuid."
+  [uuid]
+  (let [url (str "http://localhost:3000/map/" uuid)
         qr (new-map-url-qr-img url)]
     (html5
      [:head
