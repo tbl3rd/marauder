@@ -20,8 +20,10 @@
            "#googlemapcanvas { height: 100%; margin: 0; padding: 0; }"
            "#marauder-buttons { text-align: right; margin: 5px; }"
            "#marauder-find { margin-bottom: 5px; }"
-           "#marauder-search { margin: 5px; width: 300px; }"
-           "#marauder-place { vertical-align: middle; }"]))
+           "#marauder-whereami { margin-top: 5px; }"
+           "#marauder-me { margin: 5px; }"
+           ".marauder-input { margin: 5px; width: 300px; }"
+           ".marauder-icon { vertical-align: middle; }"]))
 
 (defn- layout [& content]
   (html5
@@ -37,22 +39,27 @@
 (defn- marauder-buttons
   []
   [:div#marauder-buttons
-   [:div#marauder-find
+   [:div#marauder-find.marauder-field
     [:span
-     [:input#marauder-search {:title "Where to?"
-                              :type "text"
-                              :placeholder "Where is ... ?"}]
-     [:img#marauder-place {:title "Where is?"
-                           :src "img/dd-start.png"
-                           :alt "place"}]]]
-   [:div#marauder-everyone
-    [:img {:title "Where is everyone?"
-           :src "img/marker.png"
-           :alt "everyone"}]]
-   [:div#marauder-whereami {}
-    [:img {:title "Where am I?"
-           :src "img/whereami.png"
-           :alt "whereami"}]]])
+     [:input#marauder-search.marauder-input {:title "Where to?"
+                                             :type "text"
+                                             :placeholder "Where is ... ?"}]
+     [:img#marauder-place.marauder-icon {:title "Where is?"
+                                         :src "img/dd-start.png"
+                                         :alt "place"}]]]
+   [:div#marauder-everyone.marauder-field
+    [:span
+     [:img.marauder-icon {:title "Where is everyone?"
+                          :src "img/marker.png"
+                          :alt "everyone"}]]]
+   [:div#marauder-whereami.marauder-field
+    [:span
+     [:input#marauder-me.marauder-input {:title "Give yourself a name."
+                                         :type "text"
+                                         :placeholder "Call me Ishmael?"}]
+     [:img.marauder-icon {:title "Where am I?"
+                          :src "img/whereami.png"
+                          :alt "whereami"}]]]])
 
 (defn page []
   (layout

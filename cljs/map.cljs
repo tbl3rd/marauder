@@ -12,7 +12,7 @@
 (def ^{:doc "Local user state cached across sessions."}
   state (atom (cljs.reader/read-string
                (or (. js/localStorage getItem "state")
-                   (pr-str {:id nil :name "anonymous"})))))
+                   (pr-str {:id nil :name "Ishmael"})))))
 
 (defn remember!
   "Remember that key k has value v across sessions."
@@ -123,29 +123,45 @@
         search   (util/by-dom-id :marauder-search)
         place    (util/by-dom-id :marauder-place)
         everyone (util/by-dom-id :marauder-everyone)
+        name-me  (util/by-dom-id :marauder-me)
         whereami (util/by-dom-id :marauder-whereami)
-        box (new google.maps.places.SearchBox search)
-        toggle-search (fn [] (set! (.. search -style -display)
-                                   (get {"none" "inline-block"}
-                                        (.. search -style -display) "none")))
-        clear-search (fn [] (goog.dom.setProperties search
-                                                    (js-obj "value" "")))]
-    (util/add-listener whereami "click"
-                       #(. @my-map setCenter (util/glatlng @state)))
+        search-box (new google.maps.places.SearchBox search)
+        toggle-input (fn [input]
+                       (set! (.. input -style -display)
+                             (get {"none" "inline-block"}
+                                  (.. input -style -display) "none")))
+        clear-input (fn [input]
+                      (goog.dom.setProperties input (js-obj "value" "")))]
+    (util/log {:everyone everyone})
     (util/add-listener everyone "click"
                        #(bound-marks @my-map @marks))
-    (toggle-search)
+    (toggle-input search)
+    (toggle-input name-me)
+    (util/log {:place place})
     (util/add-listener place "click"
                        (fn []
-                         (toggle-search)
-                         (clear-search)
+                         (toggle-input search)
+                         (clear-input search)
                          (. search focus)))
-    (util/add-listener box "places_changed"
+    (util/log {:search-box search-box})
+    (util/add-listener search-box "places_changed"
                        (fn []
-                         (. box setBounds (. @my-map getBounds))
-                         (if-let [place (first (. box getPlaces))]
+                         (. search-box setBounds (. @my-map getBounds))
+                         (if-let [place (first (. search-box getPlaces))]
                            (mark-place @my-map place))
                          (set! (.. search -style -display) "none")))
+    (util/log {:whereami whereami})
+    (util/add-listener whereami "click"
+                       (fn []
+                         (. @my-map setCenter (util/glatlng @state))
+                         (toggle-input name-me)
+                         (clear-input name-me)
+                         (. name-me focus)))
+    (util/log {:name-me name-me})
+    (util/add-listener name-me "change"
+                       (fn []
+                         (remember! :name (. name-me -value))
+                         (set! (.. name-me -style -display) "none")))
     (. rb-corner push buttons)))
 
 (defn initialize
