@@ -26,7 +26,9 @@
            "#marauder-whereami { margin-top: 5px; }"
            "#marauder-me { margin: 5px; }"
            ".marauder-input { margin: 5px; width: 300px; }"
-           ".marauder-icon { vertical-align: middle; }"]))
+           ".marauder-icon { vertical-align: middle; }"
+           "#marauder-join { width: 100%; }"
+           ".marauder-center { width: 50%; text-align: center;; }"]))
 
 (defn new-map-url-qr-img
   "Return a Google Chart URL for a QR encoding url."
@@ -90,11 +92,13 @@
        [:head
         [:title (str "Marauder (" uuid ")")]
         [:meta {:charset "UTF-8"}]
+        [:style {:type "text/css"} marauder-css-inline]
         (include-css "css/marauder.css")]
        [:body
-        [:div#hello "Take this map."]
-        [:div#qr
-         [:img {:title (str "URL: " url)
-                :src qr
-                :alt "The map URL"}]]
-        [:div#goodbye "May it serve you well."]])))
+        [:div#marauder-join
+         [:div.marauder-center "Take this map."]
+         [:div#marauder-qr.marauder-center
+          [:img {:title (str "URL: " url)
+                 :src qr
+                 :alt "The map URL"}]]
+         [:div.marauder-center "May it serve you well."]]])))
