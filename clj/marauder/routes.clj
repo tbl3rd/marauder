@@ -76,8 +76,10 @@
         (edn-response (update-user (:marauder-edn request))))
   (POST "/echo" request
         (pr-str "ECHO" request))
-  (GET "/" [] (page/page))
+  (GET "/" [] (page/join-page))
+  (GET "/map/:uuid" [uuid] (page/map-page uuid))
   (route/resources "/")
+  (route/resources "/map")
   (route/not-found "This is not the page you are looking for."))
 
 (def marauder-ring-app
