@@ -40,29 +40,35 @@
 
 (defn- marauder-buttons
   "The custom controls on the map page."
-  []
-  [:div#marauder-buttons
-   [:div#marauder-find.marauder-field
-    [:span
-     [:input#marauder-search.marauder-input {:title "Where to?"
-                                             :type "text"
-                                             :placeholder "Where is ... ?"}]
-     [:img#marauder-place.marauder-icon {:title "Where is?"
-                                         :src "img/dd-start.png"
-                                         :alt "place"}]]]
-   [:div#marauder-everyone.marauder-field
-    [:span
-     [:img.marauder-icon {:title "Where is everyone?"
-                          :src "img/marker.png"
-                          :alt "everyone"}]]]
-   [:div#marauder-whereami.marauder-field
-    [:span
-     [:input#marauder-me.marauder-input {:title "Give yourself a name."
-                                         :type "text"
-                                         :placeholder "Call me Ishmael?"}]
-     [:img.marauder-icon {:title "Where am I?"
-                          :src "img/whereami.png"
-                          :alt "whereami"}]]]])
+  [uuid]
+  (let [url (str "http://localhost:3000/map/" uuid)
+        qr (new-map-url-qr-img url)]
+   [:div#marauder-buttons
+    [:div#marauder-find.marauder-field
+     [:span
+      [:input#marauder-search.marauder-input {:title "Where to?"
+                                              :type "text"
+                                              :placeholder "Where is ... ?"}]
+      [:img#marauder-place.marauder-icon {:title "Where is?"
+                                          :src "img/dd-start.png"
+                                          :alt "place"}]]]
+    [:div#marauder-everyone.marauder-field
+     [:span
+      [:input#marauder-qr-code.marauder-input {:title "This map's QR code."
+                                               :type "text"
+                                               :value qr
+                                               :placeholder qr}]
+      [:img.marauder-icon {:title "Where is everyone?"
+                           :src "img/marker.png"
+                           :alt "everyone"}]]]
+    [:div#marauder-whereami.marauder-field
+     [:span
+      [:input#marauder-me.marauder-input {:title "Give yourself a name."
+                                          :type "text"
+                                          :placeholder "Call me Ishmael?"}]
+      [:img.marauder-icon {:title "Where am I?"
+                           :src "img/whereami.png"
+                           :alt "whereami"}]]]]))
 
 (defn map-page
   "The map page for uuid."
@@ -78,7 +84,7 @@
     (include-js (google-maps-url (google-maps-api-key) false))]
    [:body
     [:div#googlemapcanvas]
-    (marauder-buttons)
+    (marauder-buttons uuid)
     (include-js "js/marauder.js")
     (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])]))
 
@@ -88,17 +94,18 @@
   (let [uuid (str (java.util.UUID/randomUUID))
         url (str "http://localhost:3000/map/" uuid)
         qr (new-map-url-qr-img url)]
-      (html5
-       [:head
-        [:title (str "Marauder (" uuid ")")]
-        [:meta {:charset "UTF-8"}]
-        [:style {:type "text/css"} marauder-css-inline]
-        (include-css "css/marauder.css")]
-       [:body
-        [:div#marauder-join
-         [:div.marauder-center "Take this map."]
-         [:div#marauder-qr.marauder-center
-          [:img {:title (str "URL: " url)
-                 :src qr
-                 :alt "The map URL"}]]
-         [:div.marauder-center "May it serve you well."]]])))
+    (html5
+     [:head
+      [:title (str "Marauder (" uuid ")")]
+      [:meta {:charset "UTF-8"}]
+      [:style {:type "text/css"} marauder-css-inline]
+      (include-css "css/marauder.css")]
+     [:body
+      [:div#marauder-join
+       [:div.marauder-center "Take this map."]
+       [:div#marauder-qr.marauder-center
+        [:a {:href url}
+         [:img {:title (str "URL: " url)
+                :src qr
+                :alt qr}]]]
+       [:div.marauder-center "May it serve you well."]]])))

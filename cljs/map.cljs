@@ -122,6 +122,7 @@
         buttons  (util/by-dom-id :marauder-buttons)
         search   (util/by-dom-id :marauder-search)
         place    (util/by-dom-id :marauder-place)
+        qr-code  (util/by-dom-id :marauder-qr-code)
         everyone (util/by-dom-id :marauder-everyone)
         name-me  (util/by-dom-id :marauder-me)
         whereami (util/by-dom-id :marauder-whereami)
@@ -130,18 +131,16 @@
                        (set! (.. input -style -display)
                              (get {"none" "inline-block"}
                                   (.. input -style -display) "none")))
-        clear-input (fn [input]
-                      (goog.dom.setProperties input (js-obj "value" "")))]
-    (util/log {:everyone everyone})
-    (util/add-listener everyone "click"
-                       #(bound-marks @my-map @marks))
+        set-input-value (fn [input value]
+                          (goog.dom.setProperties input
+                                                  (js-obj "value" value)))]
+
     (toggle-input search)
-    (toggle-input name-me)
     (util/log {:place place})
     (util/add-listener place "click"
                        (fn []
                          (toggle-input search)
-                         (clear-input search)
+                         (set-input-value search "")
                          (. search focus)))
     (util/log {:search-box search-box})
     (util/add-listener search-box "places_changed"
@@ -150,12 +149,25 @@
                          (if-let [place (first (. search-box getPlaces))]
                            (mark-place @my-map place))
                          (set! (.. search -style -display) "none")))
+
+    (toggle-input qr-code)
+    (util/log {:everyone everyone})
+    (util/add-listener everyone "click"
+                       (fn []
+                         (toggle-input qr-code)
+                         (set-input-value qr-code (. qr-code -placeholder))
+                         (. qr-code focus)
+                         (. qr-code select)
+                         (bound-marks @my-map @marks)))
+    (util/log {:qr-code qr-code})
+
+    (toggle-input name-me)
     (util/log {:whereami whereami})
     (util/add-listener whereami "click"
                        (fn []
                          (. @my-map setCenter (util/glatlng @state))
                          (toggle-input name-me)
-                         (clear-input name-me)
+                         (set-input-value name-me "")
                          (. name-me focus)))
     (util/log {:name-me name-me})
     (util/add-listener name-me "change"
