@@ -1,11 +1,12 @@
 (ns marauder.qr
-  (:require [hiccup.page :refer [html5 include-css]]
+  (:require [clojure.string :as s]
+            [hiccup.page :refer [html5 include-css]]
             [marauder.site :refer [css-inline query-string url-qr-img]]))
 
 (defn qr-page
   "Show a new map URL with uuid."
-  [uuid]
-  (let [url (str "http://localhost:3000/map/" uuid)
+  [join-url uuid]
+  (let [url (s/replace join-url "/join/" "/map/")
         qr (url-qr-img url)]
     (html5
      [:head
@@ -18,7 +19,5 @@
        [:div.marauder-center "Take this map."]
        [:div#marauder-qr.marauder-center
         [:a {:href url}
-         [:img {:title (str "URL: " url)
-                :src qr
-                :alt qr}]]]
+         [:img {:title (str "URL: " url) :src qr :alt qr}]]]
        [:div.marauder-center "May it serve you well."]]])))

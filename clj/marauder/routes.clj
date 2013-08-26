@@ -1,9 +1,10 @@
 (ns marauder.routes
   (:require [clojure.string :as s]
             [clojure.edn]
-            [compojure.core :refer [defroutes GET POST]]
+            [compojure.core :refer [defroutes ANY GET POST]]
             [compojure.route :as route]
             [compojure.handler :as handler]
+            [ring.util.request :as request]
             [marauder.map :as map]
             [marauder.qr :as qr]
             [marauder.state :as state]))
@@ -13,15 +14,6 @@
   {:status (or status 200)
    :headers {"Content-type" "application/edn"}
    :body (pr-str data)})
-
-(defn wrap-log
-  "Log some keys from request to the server console."
-  [app]
-  (fn [request]
-    (println (select-keys
-              (:body request)
-              [:uri :params :body-params :form-params]))
-    (app request)))
 
 (defn wrap-marauder-edn
   "Add to request a :marauder-edn key with value an edn reading of :body."
@@ -35,16 +27,19 @@
       (app with-edn))))
 
 (defroutes routes
+  (fn [request] (println request))
+  (ANY "/echo" request
+        (pr-str "ECHO" request))
   (POST "/update" request
         (edn-response (state/update-user (:marauder-edn request))))
-  (POST "/echo" request
-        (pr-str "ECHO" request))
-  (GET "/" []
-       (qr/qr-page (str (java.util.UUID/randomUUID))))
-  (GET "/join/:uuid" [uuid]
-       (qr/qr-page uuid))
-  (GET "/map/:uuid" [uuid]
-       (map/map-page uuid))
+  (GET "/" request
+       (let [uuid (str (java.util.UUID/randomUUID))
+             url (str (request/request-url request) "map/" uuid)]
+         (qr/qr-page url uuid)))
+  (GET "/join/:uuid" [uuid :as request]
+       (qr/qr-page (request/request-url request) uuid))
+  (GET "/map/:uuid" [uuid :as request]
+       (map/map-page (request/request-url request) uuid))
   (route/resources "/")
   (route/resources "/join")
   (route/resources "/map")
@@ -53,11 +48,3 @@
 (def marauder-ring-app
   (-> (handler/site routes)
       (wrap-marauder-edn)))
-
-(def minimal-ring-request-map {:server-port 80
-                               :server-name "127.0.0.1"
-                               :remote-addr "127.0.0.1"
-                               :uri "/"
-                               :scheme :http
-                               :headers {}
-                               :request-method :get})

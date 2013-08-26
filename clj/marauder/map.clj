@@ -1,5 +1,6 @@
 (ns marauder.map
   (:require
+   [clojure.string :as s]
    [hiccup.page :refer [html5 include-css include-js]]
    [marauder.site :refer [css-inline query-string url-qr-img]]))
 
@@ -16,9 +17,9 @@
 
 (defn- back-to-qr
   "A return to this map's QR code page control."
-  [uuid]
+  [map-url]
   [:div#marauder-back
-   [:a {:href (str "http://localhost:3000/join/" uuid)}
+   [:a {:href (s/replace map-url "/map/" "/join/")}
     [:img.marauder-icon {:title "Back to QR."
                          :src "img/qr.png"
                          :alt "QR"}]]])
@@ -59,18 +60,15 @@
 
 (defn- marauder-buttons
   "The custom controls on the map page for uuid."
-  [uuid]
-  (let [url (str "http://localhost:3000/map/" uuid)
-        qr (url-qr-img url)]
-    [:div#marauder-buttons
-     (marauder-find)
-     (marauder-everyone qr)
-     (marauder-whereami)]))
+  [url]
+  [:div#marauder-buttons
+   (marauder-find)
+   (marauder-everyone (url-qr-img url))
+   (marauder-whereami)])
 
 (defn map-page
   "The map page for uuid."
-  [uuid]
-  (println "map-page " uuid)
+  [map-url uuid]
   (html5
    [:head
     [:title (str "Marauder Map (" uuid ")")]
@@ -81,7 +79,7 @@
     (include-js (google-maps-url (google-maps-api-key) false))]
    [:body
     [:div#googlemapcanvas]
-    (back-to-qr uuid)
-    (marauder-buttons uuid)
+    (back-to-qr map-url)
+    (marauder-buttons map-url)
     (include-js "js/marauder.js")
     (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])]))
