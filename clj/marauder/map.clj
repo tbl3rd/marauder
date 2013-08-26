@@ -19,7 +19,7 @@
   "A return to this map's QR code page control."
   [map-url]
   [:div#marauder-back
-   [:a {:href (s/replace map-url "/map/" "/join/")}
+   [:a {:href (s/replace map-url "/map/" "/qr/")}
     [:img.marauder-icon {:title "Back to QR."
                          :src "img/qr.png"
                          :alt "QR"}]]])

@@ -5,8 +5,8 @@
 
 (defn qr-page
   "Show a new map URL with uuid."
-  [join-url uuid]
-  (let [url (s/replace join-url "/join/" "/map/")
+  [qr-url uuid]
+  (let [url (s/replace qr-url "/qr/" "/map/")
         qr (url-qr-img url)]
     (html5
      [:head
