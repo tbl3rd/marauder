@@ -5,6 +5,7 @@
             [compojure.route :as route]
             [compojure.handler :as handler]
             [ring.util.request :as request]
+            [ring.util.response :as response]
             [marauder.map :as map]
             [marauder.qr :as qr]
             [marauder.state :as state]))
@@ -28,20 +29,15 @@
 
 (defroutes routes
   (fn [request] (println request))
-  (ANY "/echo" request
-       (pr-str "ECHO" request))
   (POST "/update" request
         (edn-response (state/update-user (:marauder-edn request))))
-  (GET "/" request
-       (let [uuid (str (java.util.UUID/randomUUID))
-             url (str (request/request-url request) "map/" uuid)]
-         (qr/qr-page url uuid)))
   (GET "/qr/:uuid" [uuid :as request]
        (qr/qr-page (request/request-url request) uuid))
   (GET "/map/:uuid" [uuid :as request]
        (map/map-page (request/request-url request) uuid))
-  (route/resources "/*")
-  (route/not-found "This is not the page you are looking for."))
+  (route/resources "/map")
+  (ANY "*" []
+   (response/redirect (str "/qr/" (java.util.UUID/randomUUID)))))
 
 (def marauder-ring-app
   (-> (handler/site routes)

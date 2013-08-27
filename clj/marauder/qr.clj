@@ -6,8 +6,8 @@
 (defn qr-page
   "Show a new map URL with uuid."
   [qr-url uuid]
-  (let [url (s/replace qr-url "/qr/" "/map/")
-        qr (url-qr-img url)]
+  (let [map-url (s/replace qr-url "/qr/" "/map/")
+        qr (url-qr-img map-url)]
     (html5
      [:head
       [:title (str "Marauder (" uuid ")")]
@@ -18,6 +18,6 @@
       [:div#marauder-join
        [:div.marauder-center "Take this map."]
        [:div#marauder-qr.marauder-center
-        [:a {:href url}
-         [:img {:title (str "URL: " url) :src qr :alt qr}]]]
+        [:a {:href map-url}
+         [:img {:title (str "URL: " map-url) :src qr :alt qr}]]]
        [:div.marauder-center "May it serve you well."]]])))
