@@ -43,6 +43,17 @@
     (util/add-listener mark "click" #(open-info gmap mark address))
     mark))
 
+(defn mark-user
+  "Mark gmap for user with id."
+  [gmap id user]
+  (let [name (:name user)
+        icon (if (= id (:id @state))
+               (icon/get-icon-for-me)
+               (icon/get-icon-for name))
+        mark (util/new-marker gmap (util/glatlng user) icon name)]
+    (util/add-listener mark "click" #(open-info gmap mark))
+    mark))
+
 (defn bound-marks
   "Pan gmap to show all marks."
   [gmap marks]
