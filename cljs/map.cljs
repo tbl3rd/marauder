@@ -46,7 +46,7 @@
       (doto mark
         (.setPosition (util/glatlng user))
         (.setTitle name)))
-    (let [mark (mark-user @my-map id user)]
+    (let [mark (mark/mark-user @my-map id user)]
       (swap! mark/marks (fn [m] (assoc m id mark)))
       mark)))
 
@@ -57,14 +57,6 @@
    (fn [response]
      (util/log {:update-user-marks (count (:users response))})
      (doseq [[id user] (:users response)] (update-user id user)))))
-
-(defn bound-marks
-  "Pan gmap to show all marks."
-  [gmap marks]
-  (let [bounds (new google.maps.LatLngBounds)]
-    (doseq [position (map (fn [m] (. m getPosition)) (vals marks))]
-      (. bounds extend position))
-    (. gmap fitBounds bounds)))
 
 (defn initialize
   "Open a ROADMAP with everyone marked."

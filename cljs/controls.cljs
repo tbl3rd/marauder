@@ -1,5 +1,6 @@
 (ns marauder.controls
-  (:require [marauder.state :as state]
+  (:require [marauder.mark :as mark]
+            [marauder.state :as state]
             [marauder.util :as util]))
 
 (defn set-input-value
@@ -32,7 +33,7 @@
                        (fn []
                          (. search-box setBounds (. gmap getBounds))
                          (if-let [place (first (. search-box getPlaces))]
-                           (state/mark-place gmap place))
+                           (mark/mark-place gmap place))
                          (set! (.. search -style -display) "none")))))
 
 (defn add-everyone-control
@@ -48,8 +49,7 @@
                          (set-input-value qr-code (. qr-code -placeholder))
                          (. qr-code focus)
                          (. qr-code select)
-                         (util/log {:marks (count @state/marks)})
-                         (state/bound-marks gmap @state/marks)))
+                         (mark/bound-marks gmap)))
     (util/log {:qr-code qr-code})))
 
 (defn add-whereami-control

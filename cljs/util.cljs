@@ -93,13 +93,3 @@
                            (. connection getResponseText))))
     (. connection send uri "POST" request
        (clj->js {"Content-type" "application/edn"}))))
-
-(defn new-marker
-  "New marker at position on gmap with icon and title."
-  [gmap position icon title]
-  (new google.maps.Marker
-       (clj->js {:map gmap
-                 :position position
-                 :icon icon
-                 :title title
-                 :animation google.maps.Animation.DROP})))
