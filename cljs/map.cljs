@@ -1,7 +1,7 @@
 (ns marauder.map
   (:require [cljs.reader :as reader-but-who-cares?]
             [marauder.controls :as controls]
-            [marauder.icon :as icon]
+            [marauder.mark :as mark]
             [marauder.state :as state]
             [marauder.util :as util]))
 
@@ -41,13 +41,13 @@
 (defn update-user
   "Update marks for user with id.  Return the user's mark."
   [id user]
-  (if-let [mark (get @state/marks id)]
+  (if-let [mark (get @mark/marks id)]
     (let [name (:name user)]
       (doto mark
         (.setPosition (util/glatlng user))
         (.setTitle name)))
     (let [mark (mark-user @my-map id user)]
-      (swap! state/marks (fn [m] (assoc m id mark)))
+      (swap! mark/marks (fn [m] (assoc m id mark)))
       mark)))
 
 (defn update-user-marks
@@ -77,8 +77,8 @@
      (let [gmap (swap! my-map #(make-google-map (bound-response response)))]
       (util/add-listener-once gmap :idle
                               #(util/periodically update-user-marks 60000))
-      (letfn [(mark [[id user]] [id (state/mark-user gmap id user)])]
-        (swap! state/marks (fn [m] (into m (map mark (:users response))))))
+      (letfn [(mark [[id user]] [id (mark/mark-user gmap id user)])]
+        (swap! mark/marks (fn [m] (into m (map mark (:users response))))))
       (controls/add-all-controls gmap)))))
 
 (util/add-listener js/window :load initialize)
