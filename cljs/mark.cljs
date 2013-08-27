@@ -17,17 +17,17 @@
     (if-let [w (. this -info-window)]
       (. w close)))
   (open-info [this]
-    (let [title (. this getTitle)]
-      (if-not (. this -info-window)
-        (set! (. this -info-window)
-              (new google.maps.InfoWindow (js-obj "content" title))))
-      (let [info (. this -info-window)]
-        (util/after #(close-info this) 30000)
-        (. info open (. this getMap) this)
-        (util/reverse-geocode
-         this
-         (fn [address]
-           (. info setContent (str title " @<br>" address))))))))
+    (let [title (. this getTitle)
+          info (or (. this -info-window)
+                   (set! (. this -info-window)
+                         (new google.maps.InfoWindow
+                              (js-obj "content" title))))]
+      (util/after #(close-info this) 30000)
+      (. info open (. this getMap) this)
+      (util/raise info)
+      (util/reverse-geocode
+       this
+       (fn [address] (. info setContent (str title " @<br>" address)))))))
 
 (defn new-mark
   "New marker at position on gmap with icon and title."
