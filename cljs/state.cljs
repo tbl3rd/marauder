@@ -13,3 +13,8 @@
   (util/log {k v})
   (let [value (swap! state assoc k v)]
     (. js/localStorage setItem "state" (pr-str value))))
+
+(defn get-my-name  []     (:name @state))
+(defn get-my-id    []     (:id @state))
+(defn set-my-name! [name] (remember! :name name))
+(defn set-my-id!   [id]   (remember! :id id))

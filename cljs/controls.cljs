@@ -39,18 +39,9 @@
 (defn add-everyone-control
   "Add the where is everyone control to gmap."
   [gmap]
-  (let [qr-code (util/by-dom-id :marauder-qr-code)
-        everyone (util/by-dom-id :marauder-everyone)]
-    (toggle-input qr-code)
+  (let [everyone (util/by-dom-id :marauder-everyone)]
     (util/log {:everyone everyone})
-    (util/add-listener everyone "click"
-                       (fn []
-                         (toggle-input qr-code)
-                         (set-input-value qr-code (. qr-code -placeholder))
-                         (. qr-code focus)
-                         (. qr-code select)
-                         (mark/bound-marks gmap)))
-    (util/log {:qr-code qr-code})))
+    (util/add-listener everyone "click" (fn [] (mark/bound-marks gmap)))))
 
 (defn add-whereami-control
   "Add the where am I control to gmap."
@@ -63,12 +54,12 @@
                        (fn []
                          (. gmap setCenter (util/glatlng @state/state))
                          (toggle-input name-me)
-                         (set-input-value name-me "")
+                         (set-input-value name-me (or (state/get-my-name) ""))
                          (. name-me focus)))
     (util/log {:name-me name-me})
     (util/add-listener name-me "change"
                        (fn []
-                         (state/remember! :name (. name-me -value))
+                         (mark/name-my-mark (. name-me -value))
                          (set! (.. name-me -style -display) "none")))))
 
 (defn add-location-controls

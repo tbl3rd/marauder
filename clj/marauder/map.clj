@@ -25,6 +25,7 @@
                          :alt "QR"}]]])
 
 (defn- marauder-find
+  "Control for dropping new place markers on the map."
   []
   [:div#marauder-find.marauder-field
    [:span
@@ -36,18 +37,16 @@
                                         :alt "place"}]]])
 
 (defn- marauder-everyone
-  [qr]
+  "Control for bringing all markers onto map."
+  []
   [:div#marauder-everyone.marauder-field
    [:span
-    [:input#marauder-qr-code.marauder-input {:title "This map's QR code."
-                                             :type "text"
-                                             :value qr
-                                             :placeholder qr}]
     [:img.marauder-icon {:title "Where is everyone?"
                          :src "img/marker.png"
                          :alt "everyone"}]]])
 
 (defn- marauder-whereami
+  "Control for naming and centering the map on me."
   []
   [:div#marauder-whereami.marauder-field
    [:span
@@ -60,10 +59,10 @@
 
 (defn- marauder-buttons
   "The custom controls on the map page for uuid."
-  [url]
+  []
   [:div#marauder-buttons
    (marauder-find)
-   (marauder-everyone (url-qr-img url))
+   (marauder-everyone)
    (marauder-whereami)])
 
 (defn map-page
@@ -80,6 +79,6 @@
    [:body
     [:div#googlemapcanvas]
     (back-to-qr map-url)
-    (marauder-buttons map-url)
+    (marauder-buttons)
     (include-js "js/marauder.js")
     (comment [:script {:type "text/javascript"} "alert('marauder loaded')"])]))

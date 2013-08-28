@@ -6,20 +6,27 @@
 (def ^{:doc "The google.maps.Marker objects indexed by id."}
   marks (atom {}))
 
+(defn info-content
+  "Add content to the info window of mark."
+  [mark]
+  (let [info (. mark -info-window)
+        title (. mark getTitle)]
+    (. info setContent title)
+    (util/reverse-geocode
+     mark
+     (fn [address] (. info setContent (str title " @<br>" address))))))
+
 (defn open-info
   "Open an info window on mark displaying a name and address."
   [mark]
   (let [title (. mark getTitle)
         info (or (. mark -info-window)
                  (set! (. mark -info-window)
-                       (new google.maps.InfoWindow
-                            (js-obj "content" title))))]
+                       (new google.maps.InfoWindow)))]
+    (info-content mark)
     (util/after #(. info close) 30000)
     (. info open (. mark getMap) mark)
-    (util/raise info)
-    (util/reverse-geocode
-     mark
-     (fn [address] (. info setContent (str title " @<br>" address))))))
+    (util/raise info)))
 
 (defn new-mark
   "New marker at position on gmap with icon and title."
@@ -48,7 +55,7 @@
     (util/log {"mark-user" user-name})
     (new-mark gmap
               (util/glatlng user)
-              (if (= id (:id @state/state))
+              (if (= id (state/get-my-id))
                 (icon/get-icon-for-me)
                 (icon/get-icon-for user-name))
               user-name)))
@@ -60,3 +67,12 @@
     (doseq [position (map (fn [m] (. m getPosition)) (vals @marks))]
       (. bounds extend position))
     (. gmap fitBounds bounds)))
+
+(defn name-my-mark
+  "Put name on my mark."
+  [name]
+  (state/set-my-name! name)
+  (let [my-mark (get @marks (state/get-my-id))]
+    (. my-mark setTitle name)
+    (info-content my-mark)))
+

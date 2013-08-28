@@ -65,7 +65,7 @@
    (fn [response]
      (util/log {:initialize (count (:users response))})
      (util/log (pr-str response))
-     (state/remember! :id (first (keys (:you response))))
+     (state/set-my-id! (first (keys (:you response))))
      (let [gmap (swap! my-map #(make-google-map (bound-response response)))]
       (util/add-listener-once gmap :idle
                               #(util/periodically update-user-marks 60000))
