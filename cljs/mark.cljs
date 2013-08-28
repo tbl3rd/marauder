@@ -6,28 +6,20 @@
 (def ^{:doc "The google.maps.Marker objects indexed by id."}
   marks (atom {}))
 
-;; Add an Marker.info-window property.
-;;
-(defprotocol IHasInfoWindow
-  (close-info [this])
-  (open-info [this]))
-(extend-type google.maps.Marker
-  IHasInfoWindow
-  (close-info [this]
-    (if-let [w (. this -info-window)]
-      (. w close)))
-  (open-info [this]
-    (let [title (. this getTitle)
-          info (or (. this -info-window)
-                   (set! (. this -info-window)
-                         (new google.maps.InfoWindow
-                              (js-obj "content" title))))]
-      (util/after #(close-info this) 30000)
-      (. info open (. this getMap) this)
-      (util/raise info)
-      (util/reverse-geocode
-       this
-       (fn [address] (. info setContent (str title " @<br>" address)))))))
+(defn open-info
+  "Open an info window on mark displaying a name and address."
+  [mark]
+  (let [title (. mark getTitle)
+        info (or (. mark -info-window)
+                 (set! (. mark -info-window)
+                       (new google.maps.InfoWindow
+                            (js-obj "content" title))))]
+    (util/after #(. info close) 30000)
+    (. info open (. mark getMap) mark)
+    (util/raise info)
+    (util/reverse-geocode
+     mark
+     (fn [address] (. info setContent (str title " @<br>" address))))))
 
 (defn new-mark
   "New marker at position on gmap with icon and title."
