@@ -12,22 +12,23 @@
   "Get the LatLngBounds of all the positions in the update response."
   [response]
   (let [bounds (new google.maps.LatLngBounds)
-        users (vals (:users response))]
-    (doseq [position (map util/glatlng users)] (. bounds extend position))
+        places (vals response)]
+    (doseq [position (map util/glatlng places)] (. bounds extend position))
     bounds))
 
 (defn request-update
   "Request an update from the server and (handle response)."
   [handle]
-  (-> js/navigator
-      (. -geolocation)
-      (. getCurrentPosition
-         (fn [position]
-           (util/post "/update"
-                      (select-keys (swap! state/state
-                                          merge (util/mlatlng position))
-                                   [:id :name :lat :lng])
-                      handle)))))
+  (let [uuid (. (util/by-dom-id :marauder-uuid) -innerHTML)]
+    (-> js/navigator
+        (. -geolocation)
+        (. getCurrentPosition
+           (fn [position]
+             (util/post (str "/update/" uuid)
+                        (select-keys (swap! state/state
+                                            merge (util/mlatlng position))
+                                     [:id :name :lat :lng])
+                        handle))))))
 
 (defn make-google-map
   "A Google Map covering the region defined by bounds."
@@ -55,8 +56,9 @@
   []
   (request-update
    (fn [response]
-     (util/log {:update-user-marks (count (:users response))})
-     (doseq [[id user] (:users response)] (update-user id user)))))
+     (let [rwoyou (dissoc response :you)]
+      (util/log {:update-user-marks (count rwoyou)})
+      (doseq [[id user] rwoyou] (update-user id user))))))
 
 (defn initialize
   "Open a ROADMAP with everyone marked."
@@ -66,11 +68,12 @@
      (util/log {:initialize (count (:users response))})
      (util/log (pr-str response))
      (state/set-my-id! (first (keys (:you response))))
-     (let [gmap (swap! my-map #(make-google-map (bound-response response)))]
+     (let [rwoyou (dissoc response :you)
+           gmap (swap! my-map #(make-google-map (bound-response rwoyou)))]
       (util/add-listener-once gmap :idle
                               #(util/periodically update-user-marks 60000))
       (letfn [(mark [[id user]] [id (mark/mark-user gmap id user)])]
-        (swap! mark/marks (fn [m] (into m (map mark (:users response))))))
+        (swap! mark/marks (fn [m] (into m (map mark rwoyou)))))
       (controls/add-all-controls gmap)))))
 
 (util/add-listener js/window :load initialize)

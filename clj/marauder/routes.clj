@@ -29,8 +29,8 @@
 
 (defroutes routes
   (fn [request] (println request))
-  (POST "/update" request
-        (edn-response (state/update-user (:marauder-edn request))))
+  (POST "/update/:uuid" [uuid :as request]
+        (edn-response (state/update-user uuid (:marauder-edn request))))
   (GET "/qr/:uuid" [uuid :as request]
        (qr/qr-page (request/request-url request) uuid))
   (GET "/map/:uuid" [uuid :as request]

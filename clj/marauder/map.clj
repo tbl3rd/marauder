@@ -77,6 +77,7 @@
     (include-css "css/marauder.css")
     (include-js (google-maps-url (google-maps-api-key) false))]
    [:body
+    [:div#marauder-uuid uuid]
     [:div#googlemapcanvas]
     (back-to-qr map-url)
     (marauder-buttons)

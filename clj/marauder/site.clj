@@ -26,7 +26,8 @@
            ".marauder-input { margin: 5px; width: 300px; }"
            ".marauder-icon { vertical-align: middle; }"
            "#marauder-join { width: 100%; }"
-           ".marauder-center { width: 50%; text-align: center;; }"]))
+           ".marauder-center { width: 50%; text-align: center;; }"
+           "#marauder-uuid { display: none; }"]))
 
 (defn merge-nested
   "Merge a sequence of nested maps into a single nested map.
