@@ -6,6 +6,11 @@
   [stuff]
   (.. js/window -console (log (clj->js stuff))))
 
+(defn set-inner-html!
+  "Set the innerHTML of element to html."
+  [element html]
+  (set! (. element -innerHTML) html))
+
 (defn by-dom-id
   "The dom element identified by dom-id."
   [dom-id]

@@ -10,11 +10,16 @@
   "Add content to the info window of mark."
   [mark]
   (let [info (. mark -info-window)
-        title (. mark getTitle)]
-    (. info setContent title)
+        title (. mark getTitle)
+        div (. js/document createElement "div")]
+    (util/add-listener div "click" (fn [] (js/alert title)))
+    (util/set-inner-html! div title)
+    (. info setContent div)
     (util/reverse-geocode
      mark
-     (fn [address] (. info setContent (str title " @<br>" address))))))
+     (fn [address]
+       (util/set-inner-html! div (str title " @<br>" address))
+       (. info setContent div)))))
 
 (defn open-info
   "Open an info window on mark displaying a name and address."
